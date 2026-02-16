@@ -20,6 +20,11 @@
         .status-atencion { background: #fee2e2; color: #991b1b; }
         .status-pendiente { background: #f3f4f6; color: #374151; }
         
+        .role-badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; text-transform: uppercase; }
+        .role-admin { background: #dbeafe; color: #1e40af; }
+        .role-colaborador { background: #e0e7ff; color: #3730a3; }
+        .role-cliente { background: #fef3c7; color: #92400e; }
+        
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1000; overflow-y: auto; }
         .modal.active { display: block; }
         .modal-content { background: white; margin: 30px auto; max-width: 1000px; border-radius: 16px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); animation: slideIn 0.3s ease; }
@@ -33,12 +38,13 @@
         .login-box { background: white; padding: 40px; border-radius: 20px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); max-width: 400px; width: 90%; text-align: center; }
         
         .hidden { display: none !important; }
+        
+        .nav-item.active { background: #2563eb; color: white; }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-800">
-    <!-- CONFIGURACIÓN DE SUPABASE - REEMPLAZA CON TU URL -->
+    <!-- CONFIGURACIÓN DE SUPABASE -->
     <script>
-        // REEMPLAZA ESTA URL CON LA TUYA:
         const SUPABASE_URL = 'https://evlenjpwgyxmdduvlyot.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV2bGVuanB3Z3l4bWRkdXZseW90Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzExODMyMTIsImV4cCI6MjA4Njc1OTIxMn0.hZBQonAB69fS4iOW_LFb-hpZrwR-BOFoOfOE-2rVqrQ';
         
@@ -94,6 +100,9 @@
                 <a href="#" onclick="showTab('clientes')" class="nav-item flex items-center gap-3 px-4 py-3 rounded-lg text-slate-300 hover:bg-slate-800 transition-colors">
                     <i class="fas fa-database w-5"></i> Clientes
                 </a>
+                <a href="#" id="nav-usuarios" onclick="showTab('usuarios')" class="nav-item flex items-center gap-3 px-4 py-3 rounded-lg text-slate-300 hover:bg-slate-800 transition-colors hidden">
+                    <i class="fas fa-users-cog w-5"></i> Usuarios
+                </a>
             </nav>
             
             <div class="p-4 border-t border-slate-700">
@@ -104,6 +113,7 @@
         </aside>
         
         <main class="flex-1 overflow-y-auto p-8">
+            <!-- Dashboard -->
             <div id="tab-dashboard" class="tab-content">
                 <h2 class="text-2xl font-bold mb-6">Dashboard</h2>
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -126,6 +136,7 @@
                 </div>
             </div>
             
+            <!-- Tickets -->
             <div id="tab-tickets" class="tab-content hidden">
                 <div class="flex justify-between items-center mb-6">
                     <h2 class="text-2xl font-bold">Incidencias</h2>
@@ -149,9 +160,34 @@
                 </div>
             </div>
             
+            <!-- Clientes -->
             <div id="tab-clientes" class="tab-content hidden">
                 <h2 class="text-2xl font-bold mb-6">Clientes</h2>
                 <div id="clientes-grid" class="grid grid-cols-1 md:grid-cols-3 gap-4"></div>
+            </div>
+            
+            <!-- Usuarios (Admin Only) -->
+            <div id="tab-usuarios" class="tab-content hidden">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold">Gestión de Usuarios</h2>
+                    <button onclick="openModal('newUser')" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2">
+                        <i class="fas fa-user-plus"></i> Nuevo Usuario
+                    </button>
+                </div>
+                <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+                    <table class="w-full">
+                        <thead class="bg-slate-50 border-b border-slate-200">
+                            <tr>
+                                <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Usuario</th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Email</th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Rol</th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Estado</th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="users-table-body" class="divide-y divide-slate-200"></tbody>
+                    </table>
+                </div>
             </div>
         </main>
     </div>
@@ -206,6 +242,54 @@
         </div>
     </div>
 
+    <!-- Modal Nuevo Usuario -->
+    <div id="newUserModal" class="modal">
+        <div class="modal-content max-w-lg">
+            <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50 rounded-t-2xl">
+                <h3 class="text-lg font-bold text-slate-800">Crear Nuevo Usuario</h3>
+                <button onclick="closeModal('newUser')" class="text-slate-400 hover:text-slate-600"><i class="fas fa-times text-xl"></i></button>
+            </div>
+            <form id="userForm" onsubmit="saveUser(event)" class="p-6 space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Nombre Completo</label>
+                    <input type="text" id="user-fullname" required class="w-full px-4 py-2 border border-slate-300 rounded-lg" placeholder="Nombre del usuario">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Email</label>
+                    <input type="email" id="user-email" required class="w-full px-4 py-2 border border-slate-300 rounded-lg" placeholder="usuario@email.com">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Contraseña</label>
+                    <input type="password" id="user-password" required minlength="6" class="w-full px-4 py-2 border border-slate-300 rounded-lg" placeholder="Mínimo 6 caracteres">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Rol</label>
+                        <select id="user-role" required class="w-full px-4 py-2 border border-slate-300 rounded-lg">
+                            <option value="colaborador">Colaborador</option>
+                            <option value="cliente">Cliente</option>
+                            <option value="admin">Administrador</option>
+                        </select>
+                    </div>
+                    <div id="cliente-asignado-container" class="hidden">
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Cliente Asignado</label>
+                        <select id="user-cliente" class="w-full px-4 py-2 border border-slate-300 rounded-lg">
+                            <option value="">Seleccionar cliente...</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Teléfono (opcional)</label>
+                    <input type="tel" id="user-telefono" class="w-full px-4 py-2 border border-slate-300 rounded-lg" placeholder="555-123-4567">
+                </div>
+                <div class="flex justify-end gap-3 pt-4 border-t border-slate-200">
+                    <button type="button" onclick="closeModal('newUser')" class="px-6 py-2 border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-50">Cancelar</button>
+                    <button type="submit" id="btn-save-user" class="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium">Crear Usuario</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <div id="toast-container"></div>
 
     <script>
@@ -215,6 +299,7 @@
         let tickets = [];
         let clientes = [];
         let catalogos = [];
+        let allUsers = [];
 
         // INICIALIZACIÓN
         document.addEventListener('DOMContentLoaded', async function() {
@@ -224,6 +309,16 @@
             } else {
                 showLoginScreen();
             }
+            
+            // Escuchar cambios en rol para mostrar/ocultar selector de cliente
+            document.getElementById('user-role')?.addEventListener('change', function() {
+                const container = document.getElementById('cliente-asignado-container');
+                if (this.value === 'cliente') {
+                    container.classList.remove('hidden');
+                } else {
+                    container.classList.add('hidden');
+                }
+            });
         });
 
         // AUTENTICACIÓN
@@ -265,6 +360,12 @@
                 currentProfile = profile;
                 
                 document.getElementById('userDisplay').textContent = profile.full_name;
+                
+                // Mostrar menú de usuarios solo si es admin
+                if (profile.role === 'admin') {
+                    document.getElementById('nav-usuarios').classList.remove('hidden');
+                }
+                
                 showMainApp();
                 await loadData();
                 
@@ -304,10 +405,42 @@
             const { data: ticketsData } = await query.order('created_at', { ascending: false });
             tickets = ticketsData || [];
             
+            // Si es admin, cargar usuarios
+            if (currentProfile.role === 'admin') {
+                await loadUsers();
+            }
+            
             renderDashboard();
             renderTickets();
             renderClientes();
             populateSelects();
+        }
+
+        async function loadUsers() {
+            try {
+                // Llamar a la Edge Function para listar usuarios
+                const { data: { session } } = await supabase.auth.getSession();
+                
+                const response = await fetch(`${SUPABASE_URL}/functions/v1/admin-users`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${session.access_token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ action: 'list' })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    allUsers = result.data.users || [];
+                    renderUsers();
+                } else {
+                    console.error('Error cargando usuarios:', result.error);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+            }
         }
 
         // RENDERIZADO
@@ -341,6 +474,33 @@
             `).join('');
         }
 
+        function renderUsers() {
+            const tbody = document.getElementById('users-table-body');
+            tbody.innerHTML = allUsers.map(u => {
+                const role = u.profile?.role || u.user_metadata?.rol || 'colaborador';
+                return `
+                <tr class="hover:bg-slate-50">
+                    <td class="px-4 py-3">
+                        <div class="font-medium text-slate-800">${u.profile?.full_name || u.user_metadata?.nombre || 'Sin nombre'}</div>
+                    </td>
+                    <td class="px-4 py-3 text-sm text-slate-600">${u.email}</td>
+                    <td class="px-4 py-3"><span class="role-badge role-${role}">${role}</span></td>
+                    <td class="px-4 py-3">
+                        <span class="px-2 py-1 rounded-full text-xs ${u.email_confirmed_at ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}">
+                            ${u.email_confirmed_at ? 'Activo' : 'Pendiente'}
+                        </span>
+                    </td>
+                    <td class="px-4 py-3">
+                        ${u.id !== currentUser.id ? `
+                        <button onclick="deleteUser('${u.id}')" class="text-red-600 hover:text-red-800 transition-colors" title="Eliminar usuario">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                        ` : '<span class="text-slate-400 text-xs">Tú</span>'}
+                    </td>
+                </tr>
+            `}).join('');
+        }
+
         function populateSelects() {
             const clienteSelect = document.getElementById('select-cliente');
             clienteSelect.innerHTML = '<option value="">Seleccionar cliente...</option>' +
@@ -349,6 +509,13 @@
             const fallaSelect = document.getElementById('select-falla');
             fallaSelect.innerHTML = '<option value="">Seleccionar falla...</option>' +
                 catalogos.map(f => `<option value="${f.valor}">${f.valor}</option>`).join('');
+                
+            // Poblar selector de clientes para usuarios
+            const userClienteSelect = document.getElementById('user-cliente');
+            if (userClienteSelect) {
+                userClienteSelect.innerHTML = '<option value="">Seleccionar cliente...</option>' +
+                    clientes.map(c => `<option value="${c.id}">${c.nombre}</option>`).join('');
+            }
         }
 
         // GUARDAR TICKET
@@ -383,6 +550,94 @@
             }
         }
 
+        // GUARDAR USUARIO (ADMIN)
+        async function saveUser(event) {
+            event.preventDefault();
+            
+            const btn = document.getElementById('btn-save-user');
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creando...';
+            btn.disabled = true;
+            
+            const userData = {
+                full_name: document.getElementById('user-fullname').value,
+                email: document.getElementById('user-email').value,
+                password: document.getElementById('user-password').value,
+                role: document.getElementById('user-role').value,
+                cliente_asignado: document.getElementById('user-cliente').value || null,
+                telefono: document.getElementById('user-telefono').value || null
+            };
+            
+            try {
+                const { data: { session } } = await supabase.auth.getSession();
+                
+                const response = await fetch(`${SUPABASE_URL}/functions/v1/admin-users`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${session.access_token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ 
+                        action: 'create',
+                        userData: userData
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showToast('Usuario creado exitosamente', 'success');
+                    closeModal('newUser');
+                    document.getElementById('userForm').reset();
+                    await loadUsers();
+                } else {
+                    throw new Error(result.error || 'Error al crear usuario');
+                }
+                
+            } catch (error) {
+                console.error('Error:', error);
+                showToast(error.message || 'Error al crear usuario', 'error');
+            } finally {
+                btn.innerHTML = 'Crear Usuario';
+                btn.disabled = false;
+            }
+        }
+
+        // ELIMINAR USUARIO
+        async function deleteUser(userId) {
+            if (!confirm('¿Estás seguro de eliminar este usuario? Esta acción no se puede deshacer.')) {
+                return;
+            }
+            
+            try {
+                const { data: { session } } = await supabase.auth.getSession();
+                
+                const response = await fetch(`${SUPABASE_URL}/functions/v1/admin-users`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${session.access_token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ 
+                        action: 'delete',
+                        userId: userId
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showToast('Usuario eliminado', 'success');
+                    await loadUsers();
+                } else {
+                    throw new Error(result.error || 'Error al eliminar');
+                }
+                
+            } catch (error) {
+                console.error('Error:', error);
+                showToast(error.message || 'Error al eliminar usuario', 'error');
+            }
+        }
+
         // UTILIDADES
         function showLoginScreen() {
             document.getElementById('loginScreen').style.display = 'flex';
@@ -399,8 +654,12 @@
         function showTab(tabName) {
             document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
             document.getElementById('tab-' + tabName).classList.remove('hidden');
-            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active', 'bg-blue-600', 'text-white'));
+            document.querySelectorAll('.nav-item').forEach(n => {
+                n.classList.remove('active', 'bg-blue-600', 'text-white');
+                n.classList.add('text-slate-300');
+            });
             event.target.closest('.nav-item').classList.add('active', 'bg-blue-600', 'text-white');
+            event.target.closest('.nav-item').classList.remove('text-slate-300');
         }
 
         function openModal(modal) {
@@ -445,6 +704,8 @@
         window.openModal = openModal;
         window.closeModal = closeModal;
         window.saveTicket = saveTicket;
+        window.saveUser = saveUser;
+        window.deleteUser = deleteUser;
     </script>
 </body>
 </html>
