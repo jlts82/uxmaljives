@@ -66,6 +66,58 @@
             
             <button onclick="login()" id="loginBtn" class="w-full mt-6 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white px-6 py-3 rounded-lg font-medium transition-all">
                 Ingresar al Sistema
+<!-- Agregar esto temporalmente para crear el primer usuario -->
+<div style="margin-top: 20px; padding: 15px; background: #f3f4f6; border-radius: 8px;">
+    <p style="font-size: 12px; color: #666; margin-bottom: 10px;">¿Primera vez? Crea el usuario admin:</p>
+    <button onclick="createFirstAdmin()" style="width: 100%; background: #10b981; color: white; padding: 10px; border-radius: 6px; border: none; cursor: pointer;">
+        Crear Usuario Admin Temporal
+    </button>
+</div>
+
+<script>
+async function createFirstAdmin() {
+    const email = prompt('Email del admin:');
+    const password = prompt('Contraseña (mínimo 6 caracteres):');
+    const name = prompt('Nombre completo:');
+    
+    if (!email || !password || password.length < 6) {
+        alert('Email y contraseña requeridos (mínimo 6 caracteres)');
+        return;
+    }
+    
+    try {
+        const { data, error } = await supabaseClient.auth.signUp({
+            email: email,
+            password: password,
+            options: {
+                data: { nombre: name, rol: 'admin' }
+            }
+        });
+        
+        if (error) throw error;
+        
+        // Crear perfil manualmente
+        const { error: profileError } = await supabaseClient
+            .from('profiles')
+            .insert([{
+                id: data.user.id,
+                full_name: name,
+                email: email,
+                role: 'admin',
+                is_active: true,
+                created_at: new Date().toISOString()
+            }]);
+            
+        if (profileError) console.warn('Profile error:', profileError);
+        
+        alert('Usuario creado. Ahora puedes iniciar sesión.');
+        location.reload();
+        
+    } catch (err) {
+        alert('Error: ' + err.message);
+    }
+}
+</script>
             </button>
             
             <div id="loginError" class="mt-4 text-red-600 text-sm hidden"></div>
