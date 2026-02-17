@@ -161,6 +161,23 @@
             color: #cbd5e1;
             margin-bottom: 16px;
         }
+
+        /* Estilos para secciones del formulario */
+        .form-section {
+            padding: 16px;
+            border-radius: 12px;
+            margin-bottom: 16px;
+        }
+        .form-section-title {
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-800">
@@ -460,52 +477,224 @@
         </main>
     </div>
 
-    <!-- Modal Nueva Incidencia -->
+    <!-- Modal Nueva Incidencia - COMPLETO CON TODOS LOS CAMPOS DEL CSV -->
     <div id="newTicketModal" class="modal">
-        <div class="modal-content max-w-2xl">
+        <div class="modal-content max-w-5xl">
             <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50 rounded-t-2xl">
-                <h3 class="text-lg font-bold text-slate-800">Nueva Incidencia</h3>
+                <h3 class="text-lg font-bold text-slate-800"><i class="fas fa-plus-circle mr-2 text-blue-600"></i>Nueva Incidencia</h3>
                 <button onclick="closeModal('newTicket')" class="text-slate-400 hover:text-slate-600"><i class="fas fa-times text-xl"></i></button>
             </div>
-            <form id="ticketForm" onsubmit="saveTicket(event)" class="p-6 space-y-4">
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-slate-700 mb-1">Folio</label>
-                        <input type="text" id="input-folio" readonly class="w-full px-4 py-2 border border-slate-300 rounded-lg bg-slate-100">
+            <form id="ticketForm" onsubmit="saveTicket(event)" class="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
+                
+                <!-- Sección: Información General -->
+                <div class="form-section bg-blue-50">
+                    <h4 class="form-section-title text-blue-800"><i class="fas fa-info-circle"></i> Información General</h4>
+                    <div class="grid grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Folio</label>
+                            <input type="text" id="input-folio" readonly class="w-full px-4 py-2 border border-slate-300 rounded-lg bg-slate-100 font-mono text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Fecha <span class="text-red-500">*</span></label>
+                            <input type="date" id="input-fecha" required class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Hora <span class="text-red-500">*</span></label>
+                            <input type="time" id="input-hora" required class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500">
+                        </div>
                     </div>
-                    <div>
-                        <label class="block text-sm font-medium text-slate-700 mb-1">Fecha</label>
-                        <input type="date" id="input-fecha" required class="w-full px-4 py-2 border border-slate-300 rounded-lg">
+                </div>
+
+                <!-- Sección: Asignación -->
+                <div class="form-section bg-purple-50">
+                    <h4 class="form-section-title text-purple-800"><i class="fas fa-users"></i> Asignación</h4>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Colaborador <span class="text-red-500">*</span></label>
+                            <input type="text" id="input-colaborador" required class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500" placeholder="Nombre del colaborador">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Método de Contacto <span class="text-red-500">*</span></label>
+                            <select id="select-metodo-contacto" required class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500">
+                                <option value="">Seleccionar...</option>
+                                <option value="Respond IO">Respond IO</option>
+                                <option value="WhatsApp">WhatsApp</option>
+                                <option value="Interno">Interno</option>
+                                <option value="Llamada">Llamada</option>
+                                <option value="Email">Email</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4 mt-4">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Responsable <span class="text-red-500">*</span></label>
+                            <select id="select-responsable" required class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500">
+                                <option value="">Seleccionar...</option>
+                                <option value="Uxmal">Uxmal</option>
+                                <option value="Cliente">Cliente</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Técnico Asignado</label>
+                            <input type="text" id="input-tecnico" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500" placeholder="Nombre del técnico">
+                        </div>
                     </div>
                 </div>
-                <div>
-                    <label class="block text-sm font-medium text-slate-700 mb-1">Cliente</label>
-                    <select id="select-cliente" required class="w-full px-4 py-2 border border-slate-300 rounded-lg">
-                        <option value="">Seleccionar cliente...</option>
-                    </select>
+
+                <!-- Sección: Cliente y Ubicación -->
+                <div class="form-section bg-green-50">
+                    <h4 class="form-section-title text-green-800"><i class="fas fa-building"></i> Cliente y Ubicación</h4>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Cliente <span class="text-red-500">*</span></label>
+                            <select id="select-cliente" required class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500">
+                                <option value="">Seleccionar cliente...</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">N° de Sucursal</label>
+                            <input type="text" id="input-num-sucursal" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500" placeholder="Ej: 001">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4 mt-4">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Nombre de Sucursal</label>
+                            <input type="text" id="input-nombre-sucursal" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500" placeholder="Nombre de la sucursal">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Ciudad</label>
+                            <input type="text" id="input-ciudad" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500" placeholder="Ciudad">
+                        </div>
+                    </div>
+                    <div class="mt-4">
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Estado</label>
+                        <input type="text" id="input-estado" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500" placeholder="Estado">
+                    </div>
                 </div>
-                <div>
-                    <label class="block text-sm font-medium text-slate-700 mb-1">Falla</label>
-                    <select id="select-falla" required class="w-full px-4 py-2 border border-slate-300 rounded-lg">
-                        <option value="">Seleccionar falla...</option>
-                    </select>
+
+                <!-- Sección: Contacto del Cliente -->
+                <div class="form-section bg-orange-50">
+                    <h4 class="form-section-title text-orange-800"><i class="fas fa-user"></i> Contacto del Cliente</h4>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Empleado que Reporta</label>
+                            <input type="text" id="input-empleado" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500" placeholder="Nombre del empleado">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Cargo</label>
+                            <input type="text" id="input-cargo" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500" placeholder="Ej: Gerente, Capitán, Sistemas">
+                        </div>
+                    </div>
                 </div>
-                <div>
-                    <label class="block text-sm font-medium text-slate-700 mb-1">Estatus</label>
-                    <select id="select-estatus" required class="w-full px-4 py-2 border border-slate-300 rounded-lg">
-                        <option value="EN ATENCIÓN TÉCNICA">En Atención Técnica</option>
-                        <option value="SOLUCIONADO POR SOPORTE">Solucionado</option>
-                        <option value="PENDIENTE POR CLIENTE">Pendiente</option>
-                        <option value="EN SEGUIMIENTO">En Seguimiento</option>
-                    </select>
+
+                <!-- Sección: Detalles de la Falla -->
+                <div class="form-section bg-red-50">
+                    <h4 class="form-section-title text-red-800"><i class="fas fa-exclamation-triangle"></i> Detalles de la Falla</h4>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Falla <span class="text-red-500">*</span></label>
+                            <select id="select-falla" required class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500">
+                                <option value="">Seleccionar falla...</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Causa</label>
+                            <select id="select-causa" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500">
+                                <option value="">Seleccionar causa...</option>
+                                <option value="FALLA DE EQUIPO">FALLA DE EQUIPO</option>
+                                <option value="FALLA DE RED">FALLA DE RED</option>
+                                <option value="USO DE APP">USO DE APP</option>
+                                <option value="MANIPULACIÓN DEL EQUIPO">MANIPULACIÓN DEL EQUIPO</option>
+                                <option value="CONFIGURACIÓN DE SONIDO">CONFIGURACIÓN DE SONIDO</option>
+                                <option value="CABLE 3.5">CABLE 3.5</option>
+                                <option value="FALLA DEL AMPLIFICADOR">FALLA DEL AMPLIFICADOR</option>
+                                <option value="MODIFICAR CONTENIDO">MODIFICAR CONTENIDO</option>
+                                <option value="RETRASO DE EQUIPO">RETRASO DE EQUIPO</option>
+                                <option value="EQUIPO APAGADO">EQUIPO APAGADO</option>
+                                <option value="CONTRASEÑA DE EQUIPO">CONTRASEÑA DE EQUIPO</option>
+                                <option value="ACTIVACIÓN DE SERVICIO">ACTIVACIÓN DE SERVICIO</option>
+                                <option value="SOBREAMPLIFICACION DE SONIDO">SOBREAMPLIFICACION DE SONIDO</option>
+                                <option value="FORMATO DE CONTENIDO">FORMATO DE CONTENIDO</option>
+                                <option value="ACLARACION">ACLARACION</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mt-4">
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Solución</label>
+                        <select id="select-solucion" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500">
+                            <option value="">Seleccionar solución...</option>
+                            <option value="REINICIO REMOTO">REINICIO REMOTO</option>
+                            <option value="REINICIO MANUAL">REINICIO MANUAL</option>
+                            <option value="REINICIO DE APP">REINICIO DE APP</option>
+                            <option value="RECONEXIÓN DE EQUIPO">RECONEXIÓN DE EQUIPO</option>
+                            <option value="REEMPLAZO DE EQUIPO">REEMPLAZO DE EQUIPO</option>
+                            <option value="ACTUALIZAR CONTENIDO">ACTUALIZAR CONTENIDO</option>
+                            <option value="PROGRAMACIÓN DE CONTENIDO">PROGRAMACIÓN DE CONTENIDO</option>
+                            <option value="MODIFICACION DE CONFIGURACION">MODIFICACION DE CONFIGURACION</option>
+                            <option value="AJUSTE DE VOLUMEN">AJUSTE DE VOLUMEN</option>
+                            <option value="CONEXIÓN BLUETOOTH">CONEXIÓN BLUETOOTH</option>
+                            <option value="RECONEXIÓN DE CABLE">RECONEXIÓN DE CABLE</option>
+                            <option value="CAMBIO DE FORMATO">CAMBIO DE FORMATO</option>
+                            <option value="SE LOGUEA EQUIPO">SE LOGUEA EQUIPO</option>
+                            <option value="SE ENCIENDE EQUIPO">SE ENCIENDE EQUIPO</option>
+                            <option value="ACLARACION">ACLARACION</option>
+                        </select>
+                    </div>
                 </div>
-                <div>
-                    <label class="block text-sm font-medium text-slate-700 mb-1">Comentarios</label>
-                    <textarea id="input-comentarios" rows="3" class="w-full px-4 py-2 border border-slate-300 rounded-lg"></textarea>
+
+                <!-- Sección: Estatus -->
+                <div class="form-section bg-yellow-50">
+                    <h4 class="form-section-title text-yellow-800"><i class="fas fa-tasks"></i> Estatus y Seguimiento</h4>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Estatus de Incidente <span class="text-red-500">*</span></label>
+                            <select id="select-estatus" required class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500">
+                                <option value="EN ATENCIÓN TÉCNICA">En Atención Técnica</option>
+                                <option value="SOLUCIONADO POR SOPORTE">Solucionado por Soporte</option>
+                                <option value="PENDIENTE POR CLIENTE">Pendiente por Cliente</option>
+                                <option value="EN SEGUIMIENTO">En Seguimiento</option>
+                                <option value="EN SEGUIMIENTO DE SOPORTE">En Seguimiento de Soporte</option>
+                                <option value="CERRADO">Cerrado</option>
+                                <option value="ACTIVACIÓN DE SERVICIO">Activación de Servicio</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Fecha de Asignación a 2° Nivel</label>
+                            <input type="date" id="input-fecha-asignacion-2do" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500">
+                        </div>
+                    </div>
+                    <div class="mt-4">
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Fecha de Cierre Técnico</label>
+                        <input type="date" id="input-fecha-cierre" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500">
+                    </div>
                 </div>
+
+                <!-- Sección: Equipos -->
+                <div class="form-section bg-gray-50">
+                    <h4 class="form-section-title text-gray-800"><i class="fas fa-tools"></i> Equipos</h4>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Equipo Retirado</label>
+                            <input type="text" id="input-equipo-retirado" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500" placeholder="Descripción del equipo retirado">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Equipo Instalado</label>
+                            <input type="text" id="input-equipo-instalado" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500" placeholder="Descripción del equipo instalado">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sección: Comentarios -->
+                <div class="form-section bg-slate-50">
+                    <h4 class="form-section-title text-slate-800"><i class="fas fa-comment-alt"></i> Comentarios</h4>
+                    <textarea id="input-comentarios" rows="4" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500" placeholder="Comentarios detallados sobre la incidencia..."></textarea>
+                </div>
+
                 <div class="flex justify-end gap-3 pt-4 border-t border-slate-200">
                     <button type="button" onclick="closeModal('newTicket')" class="px-6 py-2 border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-50">Cancelar</button>
-                    <button type="submit" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">Guardar</button>
+                    <button type="submit" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium flex items-center gap-2">
+                        <i class="fas fa-save"></i> Guardar Incidencia
+                    </button>
                 </div>
             </form>
         </div>
@@ -1445,23 +1634,55 @@
         }
 
         // ==========================================
-        // GUARDAR DATOS
+        // GUARDAR DATOS - ACTUALIZADO CON TODOS LOS CAMPOS
         // ==========================================
         async function saveTicket(event) {
             event.preventDefault();
             
             const ticket = {
+                // Información General
                 folio: document.getElementById('input-folio').value,
                 fecha: document.getElementById('input-fecha').value,
-                hora: new Date().toTimeString().slice(0, 5),
-                colaborador: currentProfile.full_name,
-                asignado_a: currentProfile.full_name,
+                hora: document.getElementById('input-hora').value,
+                
+                // Asignación
+                colaborador: document.getElementById('input-colaborador').value,
+                metodo_contacto: document.getElementById('select-metodo-contacto').value,
+                responsable: document.getElementById('select-responsable').value,
+                tecnico: document.getElementById('input-tecnico').value || null,
+                
+                // Cliente y Ubicación
                 cliente: document.getElementById('select-cliente').value,
+                num_sucursal: document.getElementById('input-num-sucursal').value || null,
+                nombre_sucursal: document.getElementById('input-nombre-sucursal').value || null,
+                ciudad: document.getElementById('input-ciudad').value || null,
+                estado: document.getElementById('input-estado').value || null,
+                
+                // Contacto del Cliente
+                empleado: document.getElementById('input-empleado').value || null,
+                cargo: document.getElementById('input-cargo').value || null,
+                
+                // Detalles de la Falla
                 falla: document.getElementById('select-falla').value,
+                causa: document.getElementById('select-causa').value || null,
+                solucion: document.getElementById('select-solucion').value || null,
+                
+                // Estatus
                 estatus: document.getElementById('select-estatus').value,
-                comentarios: document.getElementById('input-comentarios').value,
+                fecha_asignacion_2do_nivel: document.getElementById('input-fecha-asignacion-2do').value || null,
+                fecha_cierre_tecnico: document.getElementById('input-fecha-cierre').value || null,
+                
+                // Equipos
+                equipo_retirado: document.getElementById('input-equipo-retirado').value || null,
+                equipo_instalado: document.getElementById('input-equipo-instalado').value || null,
+                
+                // Comentarios
+                comentarios: document.getElementById('input-comentarios').value || null,
+                
+                // Metadatos
                 metodo: 'Web',
-                responsable: 'Uxmal'
+                created_at: new Date().toISOString(),
+                created_by: currentUser?.id || null
             };
             
             try {
@@ -1471,6 +1692,14 @@
                 showToast('Incidencia guardada exitosamente', 'success');
                 closeModal('newTicket');
                 document.getElementById('ticketForm').reset();
+                
+                // Restablecer valores por defecto
+                const now = new Date();
+                document.getElementById('input-fecha').valueAsDate = now;
+                document.getElementById('input-hora').value = now.toTimeString().slice(0, 5);
+                document.getElementById('input-folio').value = 'UX' + Date.now().toString().slice(-5);
+                document.getElementById('input-colaborador').value = currentProfile?.full_name || '';
+                
                 await loadData();
                 
             } catch (error) {
@@ -1562,17 +1791,27 @@
         function showMainApp() {
             document.getElementById('loginScreen').style.display = 'none';
             document.getElementById('mainApp').classList.remove('hidden');
-            
-            const fechaInput = document.getElementById('input-fecha');
-            if (fechaInput) fechaInput.valueAsDate = new Date();
-            
-            const folioInput = document.getElementById('input-folio');
-            if (folioInput) folioInput.value = 'UX' + Date.now().toString().slice(-5);
         }
 
         function openModal(modal) {
             const modalEl = document.getElementById(modal + 'Modal');
-            if (modalEl) modalEl.classList.add('active');
+            if (modalEl) {
+                modalEl.classList.add('active');
+                
+                // Si es el modal de nuevo ticket, inicializar valores por defecto
+                if (modal === 'newTicket') {
+                    const now = new Date();
+                    const fechaInput = document.getElementById('input-fecha');
+                    const horaInput = document.getElementById('input-hora');
+                    const folioInput = document.getElementById('input-folio');
+                    const colaboradorInput = document.getElementById('input-colaborador');
+                    
+                    if (fechaInput) fechaInput.valueAsDate = now;
+                    if (horaInput) horaInput.value = now.toTimeString().slice(0, 5);
+                    if (folioInput) folioInput.value = 'UX' + Date.now().toString().slice(-5);
+                    if (colaboradorInput && currentProfile) colaboradorInput.value = currentProfile.full_name;
+                }
+            }
         }
 
         function closeModal(modal) {
