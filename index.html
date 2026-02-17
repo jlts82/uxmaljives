@@ -40,16 +40,11 @@
         .hidden { display: none !important; }
         
         .nav-item.active { background: #2563eb; color: white; }
+        
+        .setup-box { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 16px; margin-top: 20px; }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-800">
-    <!-- CONFIGURACIÓN DE SUPABASE -->
-    <script>
-        const SUPABASE_URL = 'https://evlenjpwgyxmdduvlyot.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV2bGVuanB3Z3l4bWRkdXZseW90Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzExODMyMTIsImV4cCI6MjA4Njc1OTIxMn0.hZBQonAB69fS4iOW_LFb-hpZrwR-BOFoOfOE-2rVqrQ';
-        
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    </script>
 
     <!-- Login Screen -->
     <div id="loginScreen" class="login-screen">
@@ -74,6 +69,49 @@
             </button>
             
             <div id="loginError" class="mt-4 text-red-600 text-sm hidden"></div>
+            
+            <!-- Setup Inicial - Solo aparece si no hay usuarios -->
+            <div id="setupSection" class="setup-box hidden">
+                <h3 class="font-bold text-lg mb-2"><i class="fas fa-cog mr-2"></i>Configuración Inicial</h3>
+                <p class="text-sm mb-4 opacity-90">No se detectaron usuarios administradores. Crea el primer usuario para comenzar.</p>
+                <button onclick="showSetupModal()" class="w-full bg-white text-purple-600 px-4 py-2 rounded-lg font-medium hover:bg-gray-100 transition-all">
+                    <i class="fas fa-user-plus mr-2"></i>Crear Usuario Admin
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Setup Inicial -->
+    <div id="setupModal" class="modal">
+        <div class="modal-content max-w-md">
+            <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-gradient-to-r from-blue-600 to-purple-600 rounded-t-2xl text-white">
+                <h3 class="text-lg font-bold"><i class="fas fa-user-shield mr-2"></i>Crear Administrador Inicial</h3>
+                <button onclick="closeModal('setup')" class="text-white hover:text-gray-200"><i class="fas fa-times text-xl"></i></button>
+            </div>
+            <form id="setupForm" onsubmit="createInitialAdmin(event)" class="p-6 space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Nombre Completo</label>
+                    <input type="text" id="setup-name" required class="w-full px-4 py-2 border border-slate-300 rounded-lg" placeholder="Administrador UXMAL">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Email</label>
+                    <input type="email" id="setup-email" required class="w-full px-4 py-2 border border-slate-300 rounded-lg" placeholder="admin@uxmalstream.mx">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Contraseña</label>
+                    <input type="password" id="setup-password" required minlength="6" class="w-full px-4 py-2 border border-slate-300 rounded-lg" placeholder="Mínimo 6 caracteres">
+                </div>
+                <div class="bg-blue-50 p-3 rounded-lg text-sm text-blue-700">
+                    <i class="fas fa-info-circle mr-1"></i>
+                    Este será el usuario administrador principal con acceso total al sistema.
+                </div>
+                <div class="flex justify-end gap-3 pt-4 border-t border-slate-200">
+                    <button type="button" onclick="closeModal('setup')" class="px-6 py-2 border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-50">Cancelar</button>
+                    <button type="submit" id="btn-setup" class="px-6 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 font-medium">
+                        <i class="fas fa-check mr-1"></i>Crear y Continuar
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 
@@ -293,6 +331,15 @@
     <div id="toast-container"></div>
 
     <script>
+        // ==========================================
+        // CONFIGURACIÓN DE SUPABASE - SOLO UNA VEZ
+        // ==========================================
+        const SUPABASE_URL = 'https://evlenjpwgyxmdduvlyot.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV2bGVuanB3Z3l4bWRkdXZseW90Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzExODMyMTIsImV4cCI6MjA4Njc1OTIxMn0.hZBQonAB69fS4iOW_LFb-hpZrwR-BOFoOfOE-2rVqrQ';
+        
+        // Inicializar Supabase solo una vez
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
         // VARIABLES GLOBALES
         let currentUser = null;
         let currentProfile = null;
@@ -301,13 +348,22 @@
         let catalogos = [];
         let allUsers = [];
 
+        // ==========================================
         // INICIALIZACIÓN
+        // ==========================================
         document.addEventListener('DOMContentLoaded', async function() {
-            const { data: { session } } = await supabase.auth.getSession();
+            // Verificar si hay sesión activa
+            const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
+            
+            if (sessionError) {
+                console.error('Error al obtener sesión:', sessionError);
+            }
+            
             if (session) {
                 await loadUserProfile(session.user);
             } else {
-                showLoginScreen();
+                // Verificar si existen usuarios en el sistema
+                await checkInitialSetup();
             }
             
             // Escuchar cambios en rol para mostrar/ocultar selector de cliente
@@ -321,7 +377,103 @@
             });
         });
 
+        // ==========================================
+        // SETUP INICIAL - Crear primer usuario admin
+        // ==========================================
+        async function checkInitialSetup() {
+            try {
+                // Intentar obtener lista de usuarios para ver si existe alguno
+                const { data: profiles, error } = await supabaseClient
+                    .from('profiles')
+                    .select('id')
+                    .limit(1);
+                
+                // Si no hay perfiles, mostrar opción de setup inicial
+                if (!error && (!profiles || profiles.length === 0)) {
+                    document.getElementById('setupSection').classList.remove('hidden');
+                    showToast('Sistema sin configurar. Crea el primer usuario administrador.', 'info');
+                }
+            } catch (e) {
+                console.log('No se pudo verificar usuarios existentes');
+            }
+        }
+
+        function showSetupModal() {
+            document.getElementById('setupModal').classList.add('active');
+        }
+
+        async function createInitialAdmin(event) {
+            event.preventDefault();
+            
+            const btn = document.getElementById('btn-setup');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Creando...';
+            btn.disabled = true;
+            
+            const name = document.getElementById('setup-name').value;
+            const email = document.getElementById('setup-email').value;
+            const password = document.getElementById('setup-password').value;
+            
+            try {
+                // 1. Crear usuario en auth
+                const { data: authData, error: authError } = await supabaseClient.auth.signUp({
+                    email: email,
+                    password: password,
+                    options: {
+                        data: {
+                            nombre: name,
+                            rol: 'admin'
+                        }
+                    }
+                });
+                
+                if (authError) throw authError;
+                
+                // 2. Crear perfil manualmente (por si el trigger falla)
+                const { error: profileError } = await supabaseClient
+                    .from('profiles')
+                    .insert([{
+                        id: authData.user.id,
+                        full_name: name,
+                        email: email,
+                        role: 'admin',
+                        is_active: true,
+                        created_at: new Date().toISOString()
+                    }]);
+                
+                if (profileError) {
+                    console.warn('Error creando perfil (puede que el trigger ya lo haya creado):', profileError);
+                }
+                
+                showToast('¡Administrador creado exitosamente! Iniciando sesión...', 'success');
+                
+                // 3. Iniciar sesión automáticamente
+                setTimeout(async () => {
+                    const { data: loginData, error: loginError } = await supabaseClient.auth.signInWithPassword({
+                        email: email,
+                        password: password
+                    });
+                    
+                    if (loginError) {
+                        showToast('Usuario creado. Por favor inicia sesión manualmente.', 'success');
+                        closeModal('setup');
+                        document.getElementById('setupSection').classList.add('hidden');
+                    } else {
+                        await loadUserProfile(loginData.user);
+                    }
+                }, 1500);
+                
+            } catch (error) {
+                console.error('Error:', error);
+                showToast('Error: ' + error.message, 'error');
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        // ==========================================
         // AUTENTICACIÓN
+        // ==========================================
         async function login() {
             const email = document.getElementById('loginEmail').value.trim();
             const password = document.getElementById('loginPassword').value;
@@ -336,7 +488,11 @@
             btn.disabled = true;
             
             try {
-                const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+                const { data, error } = await supabaseClient.auth.signInWithPassword({ 
+                    email: email, 
+                    password: password 
+                });
+                
                 if (error) throw error;
                 await loadUserProfile(data.user);
             } catch (error) {
@@ -348,21 +504,45 @@
 
         async function loadUserProfile(user) {
             try {
-                const { data: profile, error } = await supabase
+                // Esperar un momento para que el trigger cree el perfil si es nuevo
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                const { data: profile, error } = await supabaseClient
                     .from('profiles')
                     .select('*')
                     .eq('id', user.id)
                     .single();
                 
-                if (error) throw error;
+                if (error) {
+                    // Si no existe el perfil, crearlo manualmente
+                    if (error.code === 'PGRST116') {
+                        const { data: newProfile, error: createError } = await supabaseClient
+                            .from('profiles')
+                            .insert([{
+                                id: user.id,
+                                full_name: user.user_metadata?.nombre || user.email,
+                                email: user.email,
+                                role: user.user_metadata?.rol || 'colaborador',
+                                is_active: true,
+                                created_at: new Date().toISOString()
+                            }])
+                            .select()
+                            .single();
+                        
+                        if (createError) throw createError;
+                        currentProfile = newProfile;
+                    } else {
+                        throw error;
+                    }
+                } else {
+                    currentProfile = profile;
+                }
                 
                 currentUser = user;
-                currentProfile = profile;
-                
-                document.getElementById('userDisplay').textContent = profile.full_name;
+                document.getElementById('userDisplay').textContent = currentProfile.full_name;
                 
                 // Mostrar menú de usuarios solo si es admin
-                if (profile.role === 'admin') {
+                if (currentProfile.role === 'admin') {
                     document.getElementById('nav-usuarios').classList.remove('hidden');
                 }
                 
@@ -370,80 +550,102 @@
                 await loadData();
                 
             } catch (error) {
-                console.error('Error:', error);
-                showError('Error al cargar perfil');
+                console.error('Error cargando perfil:', error);
+                showError('Error al cargar perfil de usuario');
             }
         }
 
         async function logout() {
-            await supabase.auth.signOut();
+            await supabaseClient.auth.signOut();
             currentUser = null;
             currentProfile = null;
-            showLoginScreen();
+            location.reload(); // Recargar para limpiar estado
         }
 
+        // ==========================================
         // CARGA DE DATOS
+        // ==========================================
         async function loadData() {
-            // Cargar clientes
-            const { data: clientesData } = await supabase.from('clientes').select('*').eq('activo', true);
-            clientes = clientesData || [];
-            
-            // Cargar catálogos (fallas)
-            const { data: catalogosData } = await supabase.from('catalogos').select('*').eq('tipo', 'falla');
-            catalogos = catalogosData || [];
-            
-            // Cargar tickets según rol
-            let query = supabase.from('tickets').select('*');
-            if (currentProfile.role === 'colaborador') {
-                query = query.or(`colaborador.eq.${currentProfile.full_name},asignado_a.eq.${currentProfile.full_name}`);
-            } else if (currentProfile.role === 'cliente') {
-                const cliente = clientes.find(c => c.id === currentProfile.cliente_asignado);
-                if (cliente) {
-                    query = query.eq('cliente', cliente.nombre);
+            try {
+                // Cargar clientes
+                const { data: clientesData, error: clientesError } = await supabaseClient
+                    .from('clientes')
+                    .select('*')
+                    .eq('activo', true);
+                
+                if (clientesError) throw clientesError;
+                clientes = clientesData || [];
+                
+                // Cargar catálogos (fallas)
+                const { data: catalogosData, error: catalogosError } = await supabaseClient
+                    .from('catalogos')
+                    .select('*')
+                    .eq('tipo', 'falla');
+                
+                if (catalogosError) throw catalogosError;
+                catalogos = catalogosData || [];
+                
+                // Cargar tickets según rol
+                let query = supabaseClient.from('tickets').select('*');
+                
+                if (currentProfile.role === 'colaborador') {
+                    query = query.or(`colaborador.eq.${currentProfile.full_name},asignado_a.eq.${currentProfile.full_name}`);
+                } else if (currentProfile.role === 'cliente') {
+                    const cliente = clientes.find(c => c.id === currentProfile.cliente_asignado);
+                    if (cliente) {
+                        query = query.eq('cliente', cliente.nombre);
+                    }
                 }
+                
+                const { data: ticketsData, error: ticketsError } = await query
+                    .order('created_at', { ascending: false });
+                
+                if (ticketsError) throw ticketsError;
+                tickets = ticketsData || [];
+                
+                // Si es admin, cargar usuarios
+                if (currentProfile.role === 'admin') {
+                    await loadUsers();
+                }
+                
+                renderDashboard();
+                renderTickets();
+                renderClientes();
+                populateSelects();
+                
+            } catch (error) {
+                console.error('Error cargando datos:', error);
+                showToast('Error al cargar datos: ' + error.message, 'error');
             }
-            const { data: ticketsData } = await query.order('created_at', { ascending: false });
-            tickets = ticketsData || [];
-            
-            // Si es admin, cargar usuarios
-            if (currentProfile.role === 'admin') {
-                await loadUsers();
-            }
-            
-            renderDashboard();
-            renderTickets();
-            renderClientes();
-            populateSelects();
         }
 
         async function loadUsers() {
             try {
-                // Llamar a la Edge Function para listar usuarios
-                const { data: { session } } = await supabase.auth.getSession();
+                // Obtener perfiles directamente de la tabla
+                const { data: profiles, error } = await supabaseClient
+                    .from('profiles')
+                    .select('*')
+                    .order('created_at', { ascending: false });
                 
-                const response = await fetch(`${SUPABASE_URL}/functions/v1/admin-users`, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${session.access_token}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ action: 'list' })
-                });
+                if (error) throw error;
                 
-                const result = await response.json();
+                // Enriquecer con datos de auth si es posible
+                allUsers = profiles.map(p => ({
+                    id: p.id,
+                    email: p.email,
+                    profile: p,
+                    user_metadata: { nombre: p.full_name, rol: p.role }
+                }));
                 
-                if (result.success) {
-                    allUsers = result.data.users || [];
-                    renderUsers();
-                } else {
-                    console.error('Error cargando usuarios:', result.error);
-                }
+                renderUsers();
             } catch (error) {
-                console.error('Error:', error);
+                console.error('Error cargando usuarios:', error);
             }
         }
 
+        // ==========================================
         // RENDERIZADO
+        // ==========================================
         function renderDashboard() {
             document.getElementById('dash-total').textContent = tickets.length;
             document.getElementById('dash-atencion').textContent = tickets.filter(t => t.estatus === 'EN ATENCIÓN TÉCNICA').length;
@@ -453,6 +655,8 @@
 
         function renderTickets() {
             const tbody = document.getElementById('tickets-table-body');
+            if (!tbody) return;
+            
             tbody.innerHTML = tickets.map(t => `
                 <tr class="hover:bg-slate-50">
                     <td class="px-4 py-3 font-bold text-slate-700">${t.folio}</td>
@@ -466,6 +670,8 @@
 
         function renderClientes() {
             const container = document.getElementById('clientes-grid');
+            if (!container) return;
+            
             container.innerHTML = clientes.map(c => `
                 <div class="bg-white rounded-xl border border-slate-200 p-4">
                     <h4 class="font-bold text-slate-800">${c.nombre}</h4>
@@ -476,22 +682,24 @@
 
         function renderUsers() {
             const tbody = document.getElementById('users-table-body');
+            if (!tbody) return;
+            
             tbody.innerHTML = allUsers.map(u => {
-                const role = u.profile?.role || u.user_metadata?.rol || 'colaborador';
+                const role = u.profile?.role || 'colaborador';
                 return `
                 <tr class="hover:bg-slate-50">
                     <td class="px-4 py-3">
-                        <div class="font-medium text-slate-800">${u.profile?.full_name || u.user_metadata?.nombre || 'Sin nombre'}</div>
+                        <div class="font-medium text-slate-800">${u.profile?.full_name || 'Sin nombre'}</div>
                     </td>
                     <td class="px-4 py-3 text-sm text-slate-600">${u.email}</td>
                     <td class="px-4 py-3"><span class="role-badge role-${role}">${role}</span></td>
                     <td class="px-4 py-3">
-                        <span class="px-2 py-1 rounded-full text-xs ${u.email_confirmed_at ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}">
-                            ${u.email_confirmed_at ? 'Activo' : 'Pendiente'}
+                        <span class="px-2 py-1 rounded-full text-xs ${u.profile?.is_active ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}">
+                            ${u.profile?.is_active ? 'Activo' : 'Inactivo'}
                         </span>
                     </td>
                     <td class="px-4 py-3">
-                        ${u.id !== currentUser.id ? `
+                        ${u.id !== currentUser?.id ? `
                         <button onclick="deleteUser('${u.id}')" class="text-red-600 hover:text-red-800 transition-colors" title="Eliminar usuario">
                             <i class="fas fa-trash-alt"></i>
                         </button>
@@ -503,14 +711,17 @@
 
         function populateSelects() {
             const clienteSelect = document.getElementById('select-cliente');
-            clienteSelect.innerHTML = '<option value="">Seleccionar cliente...</option>' +
-                clientes.map(c => `<option value="${c.nombre}">${c.nombre}</option>`).join('');
+            if (clienteSelect) {
+                clienteSelect.innerHTML = '<option value="">Seleccionar cliente...</option>' +
+                    clientes.map(c => `<option value="${c.nombre}">${c.nombre}</option>`).join('');
+            }
             
             const fallaSelect = document.getElementById('select-falla');
-            fallaSelect.innerHTML = '<option value="">Seleccionar falla...</option>' +
-                catalogos.map(f => `<option value="${f.valor}">${f.valor}</option>`).join('');
-                
-            // Poblar selector de clientes para usuarios
+            if (fallaSelect) {
+                fallaSelect.innerHTML = '<option value="">Seleccionar falla...</option>' +
+                    catalogos.map(f => `<option value="${f.valor}">${f.valor}</option>`).join('');
+            }
+            
             const userClienteSelect = document.getElementById('user-cliente');
             if (userClienteSelect) {
                 userClienteSelect.innerHTML = '<option value="">Seleccionar cliente...</option>' +
@@ -518,7 +729,9 @@
             }
         }
 
+        // ==========================================
         // GUARDAR TICKET
+        // ==========================================
         async function saveTicket(event) {
             event.preventDefault();
             
@@ -537,24 +750,28 @@
             };
             
             try {
-                const { error } = await supabase.from('tickets').insert([ticket]);
+                const { error } = await supabaseClient.from('tickets').insert([ticket]);
                 if (error) throw error;
                 
-                showToast('Incidencia guardada', 'success');
+                showToast('Incidencia guardada exitosamente', 'success');
                 closeModal('newTicket');
+                document.getElementById('ticketForm').reset();
                 await loadData();
                 
             } catch (error) {
-                console.error('Error:', error);
-                showToast('Error al guardar', 'error');
+                console.error('Error guardando ticket:', error);
+                showToast('Error al guardar: ' + error.message, 'error');
             }
         }
 
+        // ==========================================
         // GUARDAR USUARIO (ADMIN)
+        // ==========================================
         async function saveUser(event) {
             event.preventDefault();
             
             const btn = document.getElementById('btn-save-user');
+            const originalText = btn.innerHTML;
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creando...';
             btn.disabled = true;
             
@@ -568,77 +785,78 @@
             };
             
             try {
-                const { data: { session } } = await supabase.auth.getSession();
-                
-                const response = await fetch(`${SUPABASE_URL}/functions/v1/admin-users`, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${session.access_token}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ 
-                        action: 'create',
-                        userData: userData
-                    })
+                // Crear usuario en auth
+                const { data: authData, error: authError } = await supabaseClient.auth.signUp({
+                    email: userData.email,
+                    password: userData.password,
+                    options: {
+                        data: {
+                            nombre: userData.full_name,
+                            rol: userData.role
+                        }
+                    }
                 });
                 
-                const result = await response.json();
+                if (authError) throw authError;
                 
-                if (result.success) {
-                    showToast('Usuario creado exitosamente', 'success');
-                    closeModal('newUser');
-                    document.getElementById('userForm').reset();
-                    await loadUsers();
-                } else {
-                    throw new Error(result.error || 'Error al crear usuario');
-                }
+                // Actualizar perfil con datos adicionales
+                const { error: updateError } = await supabaseClient
+                    .from('profiles')
+                    .update({
+                        cliente_asignado: userData.cliente_asignado,
+                        telefono: userData.telefono
+                    })
+                    .eq('id', authData.user.id);
+                
+                if (updateError) console.warn('Error actualizando perfil:', updateError);
+                
+                showToast('Usuario creado exitosamente', 'success');
+                closeModal('newUser');
+                document.getElementById('userForm').reset();
+                await loadUsers();
                 
             } catch (error) {
-                console.error('Error:', error);
-                showToast(error.message || 'Error al crear usuario', 'error');
+                console.error('Error creando usuario:', error);
+                showToast('Error: ' + error.message, 'error');
             } finally {
-                btn.innerHTML = 'Crear Usuario';
+                btn.innerHTML = originalText;
                 btn.disabled = false;
             }
         }
 
+        // ==========================================
         // ELIMINAR USUARIO
+        // ==========================================
         async function deleteUser(userId) {
             if (!confirm('¿Estás seguro de eliminar este usuario? Esta acción no se puede deshacer.')) {
                 return;
             }
             
             try {
-                const { data: { session } } = await supabase.auth.getSession();
+                // Eliminar perfil primero
+                const { error: profileError } = await supabaseClient
+                    .from('profiles')
+                    .delete()
+                    .eq('id', userId);
                 
-                const response = await fetch(`${SUPABASE_URL}/functions/v1/admin-users`, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${session.access_token}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ 
-                        action: 'delete',
-                        userId: userId
-                    })
-                });
+                if (profileError) throw profileError;
                 
-                const result = await response.json();
+                // Nota: El usuario en auth.users permanece, pero ya no podrá acceder
+                // ya que no tiene perfil. Para eliminar completamente se necesitaría
+                // una Edge Function con SERVICE_ROLE_KEY.
                 
-                if (result.success) {
-                    showToast('Usuario eliminado', 'success');
-                    await loadUsers();
-                } else {
-                    throw new Error(result.error || 'Error al eliminar');
-                }
+                showToast('Usuario eliminado del sistema', 'success');
+                await loadUsers();
                 
             } catch (error) {
-                console.error('Error:', error);
-                showToast(error.message || 'Error al eliminar usuario', 'error');
+                console.error('Error eliminando usuario:', error);
+                showToast('Error al eliminar: ' + error.message, 'error');
             }
         }
 
+        // ==========================================
         // UTILIDADES
+        // ==========================================
         function showLoginScreen() {
             document.getElementById('loginScreen').style.display = 'flex';
             document.getElementById('mainApp').classList.add('hidden');
@@ -647,27 +865,40 @@
         function showMainApp() {
             document.getElementById('loginScreen').style.display = 'none';
             document.getElementById('mainApp').classList.remove('hidden');
-            document.getElementById('input-fecha').valueAsDate = new Date();
-            document.getElementById('input-folio').value = 'UX' + Date.now().toString().slice(-5);
+            
+            // Configurar valores por defecto
+            const fechaInput = document.getElementById('input-fecha');
+            if (fechaInput) fechaInput.valueAsDate = new Date();
+            
+            const folioInput = document.getElementById('input-folio');
+            if (folioInput) folioInput.value = 'UX' + Date.now().toString().slice(-5);
         }
 
         function showTab(tabName) {
             document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
-            document.getElementById('tab-' + tabName).classList.remove('hidden');
+            const tab = document.getElementById('tab-' + tabName);
+            if (tab) tab.classList.remove('hidden');
+            
             document.querySelectorAll('.nav-item').forEach(n => {
                 n.classList.remove('active', 'bg-blue-600', 'text-white');
                 n.classList.add('text-slate-300');
             });
-            event.target.closest('.nav-item').classList.add('active', 'bg-blue-600', 'text-white');
-            event.target.closest('.nav-item').classList.remove('text-slate-300');
+            
+            const activeNav = event.target.closest('.nav-item');
+            if (activeNav) {
+                activeNav.classList.add('active', 'bg-blue-600', 'text-white');
+                activeNav.classList.remove('text-slate-300');
+            }
         }
 
         function openModal(modal) {
-            document.getElementById(modal + 'Modal').classList.add('active');
+            const modalEl = document.getElementById(modal + 'Modal');
+            if (modalEl) modalEl.classList.add('active');
         }
 
         function closeModal(modal) {
-            document.getElementById(modal + 'Modal').classList.remove('active');
+            const modalEl = document.getElementById(modal + 'Modal');
+            if (modalEl) modalEl.classList.remove('active');
         }
 
         function getStatusClass(status) {
@@ -683,21 +914,39 @@
 
         function showError(msg) {
             const el = document.getElementById('loginError');
-            el.textContent = msg;
-            el.classList.remove('hidden');
+            if (el) {
+                el.textContent = msg;
+                el.classList.remove('hidden');
+            }
         }
 
-        function showToast(message, type) {
+        function showToast(message, type = 'info') {
             const container = document.getElementById('toast-container');
             const toast = document.createElement('div');
-            toast.className = `toast ${type === 'success' ? 'bg-emerald-500' : 'bg-red-500'}`;
-            toast.innerHTML = `<i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i>${message}`;
+            
+            const colors = {
+                success: 'bg-emerald-500',
+                error: 'bg-red-500',
+                info: 'bg-blue-500'
+            };
+            
+            const icons = {
+                success: 'check-circle',
+                error: 'exclamation-circle',
+                info: 'info-circle'
+            };
+            
+            toast.className = `toast ${colors[type] || colors.info}`;
+            toast.innerHTML = `<i class="fas fa-${icons[type] || icons.info} mr-2"></i>${message}`;
+            
             container.appendChild(toast);
             setTimeout(() => toast.classList.add('show'), 100);
             setTimeout(() => toast.remove(), 3000);
         }
 
-        // Exponer funciones globales
+        // ==========================================
+        // EXPONER FUNCIONES GLOBALES
+        // ==========================================
         window.login = login;
         window.logout = logout;
         window.showTab = showTab;
@@ -706,6 +955,8 @@
         window.saveTicket = saveTicket;
         window.saveUser = saveUser;
         window.deleteUser = deleteUser;
+        window.showSetupModal = showSetupModal;
+        window.createInitialAdmin = createInitialAdmin;
     </script>
 </body>
 </html>
