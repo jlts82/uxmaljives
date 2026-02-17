@@ -43,7 +43,7 @@
         
         .setup-box { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 16px; margin-top: 20px; }
 
-        /* ESTILOS DE SEMÁFOROS - Migrados de index (1).html */
+        /* ESTILOS DE SEMÁFOROS */
         .semaforo-card { 
             background: white; 
             border-radius: 16px; 
@@ -150,6 +150,17 @@
 
         .tab-content { display: none; }
         .tab-content.active { display: block; }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #64748b;
+        }
+        .empty-state i {
+            font-size: 64px;
+            color: #cbd5e1;
+            margin-bottom: 16px;
+        }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-800">
@@ -178,10 +189,9 @@
             
             <div id="loginError" class="mt-4 text-red-600 text-sm hidden"></div>
             
-            <!-- Setup Inicial - Solo aparece si no hay usuarios -->
             <div id="setupSection" class="setup-box hidden">
                 <h3 class="font-bold text-lg mb-2"><i class="fas fa-cog mr-2"></i>Configuración Inicial</h3>
-                <p class="text-sm mb-4 opacity-90">No se detectaron usuarios administradores. Crea el primer usuario para comenzar.</p>
+                <p class="text-sm mb-4 opacity-90">No se detectaron usuarios administradores.</p>
                 <button onclick="showSetupModal()" class="w-full bg-white text-purple-600 px-4 py-2 rounded-lg font-medium hover:bg-gray-100 transition-all">
                     <i class="fas fa-user-plus mr-2"></i>Crear Usuario Admin
                 </button>
@@ -277,6 +287,25 @@
                     </div>
                 </div>
 
+                <!-- Alerta si no hay datos -->
+                <div id="no-data-alert" class="hidden bg-amber-50 border border-amber-200 rounded-xl p-6 mb-6">
+                    <div class="flex items-start gap-4">
+                        <div class="text-amber-500 text-2xl"><i class="fas fa-exclamation-triangle"></i></div>
+                        <div class="flex-1">
+                            <h4 class="font-bold text-amber-800 mb-1">No hay datos en la base de datos</h4>
+                            <p class="text-amber-700 text-sm mb-3">Las tablas de clientes y tickets están vacías. Necesitas migrar los datos del CSV o crear datos de prueba.</p>
+                            <div class="flex gap-3">
+                                <button onclick="loadSampleData()" class="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg text-sm font-medium">
+                                    <i class="fas fa-database mr-2"></i>Cargar Datos de Prueba
+                                </button>
+                                <button onclick="checkConnection()" class="bg-slate-600 hover:bg-slate-700 text-white px-4 py-2 rounded-lg text-sm font-medium">
+                                    <i class="fas fa-sync mr-2"></i>Verificar Conexión
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="semaforo-stats mb-6">
                     <div class="semaforo-stat-card border-red-200">
                         <div class="semaforo-stat-number text-red-600" id="semaforo-count-rojo">0</div>
@@ -303,7 +332,7 @@
 
                 <div class="bg-white rounded-xl border border-slate-200 p-6 mb-6">
                     <div class="flex flex-wrap gap-3 items-center justify-between mb-4">
-                        <h3 class="text-lg font-bold text-slate-800">Clientes Críticos <span class="text-red-600">(Requieren atención inmediata)</span></h3>
+                        <h3 class="text-lg font-bold text-slate-800">Clientes por Estado</h3>
                         <div class="flex gap-2">
                             <button onclick="filterSemaforo('todos')" class="filter-chip active" id="filter-sema-todos">Todos</button>
                             <button onclick="filterSemaforo('rojo')" class="filter-chip" id="filter-sema-rojo">🔴 Críticos</button>
@@ -311,7 +340,9 @@
                             <button onclick="filterSemaforo('verde')" class="filter-chip" id="filter-sema-verde">🟢 Estables</button>
                         </div>
                     </div>
-                    <div id="semaforo-grid" class="semaforo-grid"></div>
+                    <div id="semaforo-grid" class="semaforo-grid">
+                        <!-- Aquí se renderizan las tarjetas -->
+                    </div>
                 </div>
 
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -507,15 +538,13 @@
 
     <script>
         // ==========================================
-        // CONFIGURACIÓN DE SUPABASE - CORREGIDA
+        // CONFIGURACIÓN DE SUPABASE
         // ==========================================
         const SUPABASE_URL = 'https://evlenjpwgyxmdduvlyot.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV2bGVuanB3Z3l4bWRkdXZseW90Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzExODMyMTIsImV4cCI6MjA4Njc1OTIxMn0.hZBQonAB69fS4iOW_LFb-hpZrwR-BOFoOfOE-2rVqrQ';
         
-        // Inicializar Supabase solo una vez
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         
-        // VARIABLES GLOBALES
         let currentUser = null;
         let currentProfile = null;
         let tickets = [];
@@ -529,21 +558,22 @@
         // INICIALIZACIÓN
         // ==========================================
         document.addEventListener('DOMContentLoaded', async function() {
-            // Verificar si hay sesión activa
+            console.log('🚀 Iniciando aplicación...');
+            
             const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
             
             if (sessionError) {
-                console.error('Error al obtener sesión:', sessionError);
+                console.error('❌ Error al obtener sesión:', sessionError);
             }
             
             if (session) {
+                console.log('✅ Sesión activa encontrada');
                 await loadUserProfile(session.user);
             } else {
-                // Verificar si existen usuarios en el sistema
+                console.log('⚠️ No hay sesión activa');
                 await checkInitialSetup();
             }
             
-            // Escuchar cambios en rol para mostrar/ocultar selector de cliente
             document.getElementById('user-role')?.addEventListener('change', function() {
                 const container = document.getElementById('cliente-asignado-container');
                 if (this.value === 'cliente') {
@@ -555,17 +585,44 @@
         });
 
         // ==========================================
-        // SETUP INICIAL - Crear primer usuario admin
+        // VERIFICACIÓN DE CONEXIÓN
+        // ==========================================
+        async function checkConnection() {
+            try {
+                showToast('Verificando conexión a Supabase...', 'info');
+                
+                const { data, error } = await supabaseClient
+                    .from('clientes')
+                    .select('count', { count: 'exact' });
+                
+                if (error) {
+                    console.error('❌ Error de conexión:', error);
+                    showToast('Error de conexión: ' + error.message, 'error');
+                    return false;
+                }
+                
+                console.log('✅ Conexión exitosa. Clientes:', data);
+                showToast('Conexión a Supabase exitosa', 'success');
+                await loadData();
+                return true;
+                
+            } catch (err) {
+                console.error('❌ Error:', err);
+                showToast('Error: ' + err.message, 'error');
+                return false;
+            }
+        }
+
+        // ==========================================
+        // SETUP INICIAL
         // ==========================================
         async function checkInitialSetup() {
             try {
-                // Intentar obtener lista de usuarios para ver si existe alguno
                 const { data: profiles, error } = await supabaseClient
                     .from('profiles')
                     .select('id')
                     .limit(1);
                 
-                // Si no hay perfiles, mostrar opción de setup inicial
                 if (!error && (!profiles || profiles.length === 0)) {
                     document.getElementById('setupSection').classList.remove('hidden');
                     showToast('Sistema sin configurar. Crea el primer usuario administrador.', 'info');
@@ -592,21 +649,16 @@
             const password = document.getElementById('setup-password').value;
             
             try {
-                // 1. Crear usuario en auth
                 const { data: authData, error: authError } = await supabaseClient.auth.signUp({
                     email: email,
                     password: password,
                     options: {
-                        data: {
-                            nombre: name,
-                            rol: 'admin'
-                        }
+                        data: { nombre: name, rol: 'admin' }
                     }
                 });
                 
                 if (authError) throw authError;
                 
-                // 2. Crear perfil manualmente (por si el trigger falla)
                 const { error: profileError } = await supabaseClient
                     .from('profiles')
                     .insert([{
@@ -618,13 +670,10 @@
                         created_at: new Date().toISOString()
                     }]);
                 
-                if (profileError) {
-                    console.warn('Error creando perfil (puede que el trigger ya lo haya creado):', profileError);
-                }
+                if (profileError) console.warn('Profile error:', profileError);
                 
-                showToast('¡Administrador creado exitosamente! Iniciando sesión...', 'success');
+                showToast('¡Administrador creado! Iniciando sesión...', 'success');
                 
-                // 3. Iniciar sesión automáticamente
                 setTimeout(async () => {
                     const { data: loginData, error: loginError } = await supabaseClient.auth.signInWithPassword({
                         email: email,
@@ -681,7 +730,6 @@
 
         async function loadUserProfile(user) {
             try {
-                // Esperar un momento para que el trigger cree el perfil si es nuevo
                 await new Promise(resolve => setTimeout(resolve, 500));
                 
                 const { data: profile, error } = await supabaseClient
@@ -691,7 +739,6 @@
                     .single();
                 
                 if (error) {
-                    // Si no existe el perfil, crearlo manualmente
                     if (error.code === 'PGRST116') {
                         const { data: newProfile, error: createError } = await supabaseClient
                             .from('profiles')
@@ -718,7 +765,6 @@
                 currentUser = user;
                 document.getElementById('userDisplay').textContent = currentProfile.full_name;
                 
-                // Mostrar menú de usuarios solo si es admin
                 if (currentProfile.role === 'admin') {
                     document.getElementById('nav-usuarios').classList.remove('hidden');
                 }
@@ -736,33 +782,46 @@
             await supabaseClient.auth.signOut();
             currentUser = null;
             currentProfile = null;
-            location.reload(); // Recargar para limpiar estado
+            location.reload();
         }
 
         // ==========================================
         // CARGA DE DATOS
         // ==========================================
         async function loadData() {
+            console.log('📊 Cargando datos...');
+            
             try {
                 // Cargar clientes
+                console.log('⏳ Cargando clientes...');
                 const { data: clientesData, error: clientesError } = await supabaseClient
                     .from('clientes')
                     .select('*')
                     .eq('activo', true);
                 
-                if (clientesError) throw clientesError;
+                if (clientesError) {
+                    console.error('❌ Error clientes:', clientesError);
+                    throw clientesError;
+                }
                 clientes = clientesData || [];
-                
-                // Cargar catálogos (fallas)
+                console.log('✅ Clientes cargados:', clientes.length);
+
+                // Cargar catálogos
+                console.log('⏳ Cargando catálogos...');
                 const { data: catalogosData, error: catalogosError } = await supabaseClient
                     .from('catalogos')
                     .select('*')
                     .eq('tipo', 'falla');
                 
-                if (catalogosError) throw catalogosError;
+                if (catalogosError) {
+                    console.error('❌ Error catálogos:', catalogosError);
+                    throw catalogosError;
+                }
                 catalogos = catalogosData || [];
-                
-                // Cargar tickets según rol
+                console.log('✅ Catálogos cargados:', catalogos.length);
+
+                // Cargar tickets
+                console.log('⏳ Cargando tickets...');
                 let query = supabaseClient.from('tickets').select('*');
                 
                 if (currentProfile.role === 'colaborador') {
@@ -777,29 +836,37 @@
                 const { data: ticketsData, error: ticketsError } = await query
                     .order('created_at', { ascending: false });
                 
-                if (ticketsError) throw ticketsError;
+                if (ticketsError) {
+                    console.error('❌ Error tickets:', ticketsError);
+                    throw ticketsError;
+                }
                 tickets = ticketsData || [];
-                
-                // Si es admin, cargar usuarios
+                console.log('✅ Tickets cargados:', tickets.length);
+
+                // Verificar si hay datos
+                if (clientes.length === 0 || tickets.length === 0) {
+                    console.warn('⚠️ No hay datos suficientes para mostrar semáforos');
+                    document.getElementById('no-data-alert').classList.remove('hidden');
+                } else {
+                    document.getElementById('no-data-alert').classList.add('hidden');
+                }
+
+                // Cargar usuarios si es admin
                 if (currentProfile.role === 'admin') {
                     await loadUsers();
                 }
                 
-                renderDashboard();
-                renderTickets();
-                renderClientes();
-                renderSemaforos(); // NUEVO: Renderizar semáforos
-                populateSelects();
+                renderAll();
+                console.log('✅ Renderizado completo');
                 
             } catch (error) {
-                console.error('Error cargando datos:', error);
+                console.error('❌ Error cargando datos:', error);
                 showToast('Error al cargar datos: ' + error.message, 'error');
             }
         }
 
         async function loadUsers() {
             try {
-                // Obtener perfiles directamente de la tabla
                 const { data: profiles, error } = await supabaseClient
                     .from('profiles')
                     .select('*')
@@ -807,7 +874,6 @@
                 
                 if (error) throw error;
                 
-                // Enriquecer con datos de auth si es posible
                 allUsers = profiles.map(p => ({
                     id: p.id,
                     email: p.email,
@@ -822,9 +888,110 @@
         }
 
         // ==========================================
-        // SEMÁFOROS - NUEVA FUNCIONALIDAD
+        // DATOS DE PRUEBA
+        // ==========================================
+        async function loadSampleData() {
+            showToast('Cargando datos de prueba...', 'info');
+            
+            const sampleClientes = [
+                'MI VIEJO PUEBLITO', 'APPLEBEES', '50 FRIENDS', 'ACEROS LAMASI', 
+                'ACUARIO MICHIN', 'ANDAZ', 'ANGUS', 'AQUAA'
+            ];
+            
+            const sampleFallas = [
+                'SIN AUDIO', 'SIN VIDEO', 'SIN AUDIO Y VIDEO', 'CONTENIDO', 'FALLA DE APP'
+            ];
+            
+            try {
+                // Insertar clientes
+                for (const nombre of sampleClientes) {
+                    await supabaseClient.from('clientes').upsert([
+                        { nombre: nombre, activo: true }
+                    ], { onConflict: 'nombre' });
+                }
+                
+                // Insertar catálogos
+                for (const falla of sampleFallas) {
+                    await supabaseClient.from('catalogos').upsert([
+                        { tipo: 'falla', valor: falla }
+                    ], { onConflict: ['tipo', 'valor'] });
+                }
+                
+                // Insertar tickets de prueba
+                const today = new Date();
+                const sampleTickets = [];
+                
+                // Crear tickets para MI VIEJO PUEBLITO (crítico - 8 tickets)
+                for (let i = 0; i < 8; i++) {
+                    sampleTickets.push({
+                        folio: 'UX' + String(i + 1).padStart(5, '0'),
+                        fecha: new Date(today.getTime() - i * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+                        hora: '10:00',
+                        colaborador: 'Daniela',
+                        asignado_a: 'Ulises',
+                        cliente: 'MI VIEJO PUEBLITO',
+                        falla: 'SIN AUDIO',
+                        estatus: i < 3 ? 'SOLUCIONADO POR SOPORTE' : 'EN ATENCIÓN TÉCNICA',
+                        comentarios: 'Ticket de prueba',
+                        metodo: 'Web',
+                        responsable: 'Uxmal'
+                    });
+                }
+                
+                // Crear tickets para APPLEBEES (precaución - 3 tickets)
+                for (let i = 0; i < 3; i++) {
+                    sampleTickets.push({
+                        folio: 'UX' + String(i + 9).padStart(5, '0'),
+                        fecha: new Date(today.getTime() - i * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+                        hora: '14:00',
+                        colaborador: 'Fernanda',
+                        asignado_a: 'Daniela',
+                        cliente: 'APPLEBEES',
+                        falla: 'SIN VIDEO',
+                        estatus: 'EN SEGUIMIENTO',
+                        comentarios: 'Ticket de prueba',
+                        metodo: 'Web',
+                        responsable: 'Uxmal'
+                    });
+                }
+                
+                // Crear 1 ticket para otros clientes (estables)
+                const otrosClientes = ['50 FRIENDS', 'ACEROS LAMASI', 'ACUARIO MICHIN'];
+                otrosClientes.forEach((cliente, idx) => {
+                    sampleTickets.push({
+                        folio: 'UX' + String(idx + 12).padStart(5, '0'),
+                        fecha: today.toISOString().split('T')[0],
+                        hora: '09:00',
+                        colaborador: 'Jazbeth',
+                        asignado_a: 'Ulises',
+                        cliente: cliente,
+                        falla: 'CONTENIDO',
+                        estatus: 'SOLUCIONADO POR SOPORTE',
+                        comentarios: 'Ticket de prueba',
+                        metodo: 'Web',
+                        responsable: 'Uxmal'
+                    });
+                });
+                
+                await supabaseClient.from('tickets').insert(sampleTickets);
+                
+                showToast('Datos de prueba cargados exitosamente', 'success');
+                await loadData();
+                
+            } catch (error) {
+                console.error('Error cargando datos de prueba:', error);
+                showToast('Error: ' + error.message, 'error');
+            }
+        }
+
+        // ==========================================
+        // SEMÁFOROS
         // ==========================================
         function getSemaforoData() {
+            console.log('🚦 Calculando datos de semáforos...');
+            console.log('Clientes:', clientes.length);
+            console.log('Tickets:', tickets.length);
+            
             const hoy = new Date();
             const hace7Dias = new Date(hoy.getTime() - 7 * 24 * 60 * 60 * 1000);
             
@@ -837,13 +1004,19 @@
             
             // Contar tickets de los últimos 7 días
             tickets.forEach(ticket => {
-                const fechaTicket = new Date(ticket.fecha);
-                if (fechaTicket >= hace7Dias && fechaTicket <= hoy) {
-                    if (conteoClientes[ticket.cliente] !== undefined) {
-                        conteoClientes[ticket.cliente]++;
+                try {
+                    const fechaTicket = new Date(ticket.fecha);
+                    if (fechaTicket >= hace7Dias && fechaTicket <= hoy) {
+                        if (conteoClientes[ticket.cliente] !== undefined) {
+                            conteoClientes[ticket.cliente]++;
+                        }
                     }
+                } catch (e) {
+                    console.warn('Fecha inválida:', ticket.fecha);
                 }
             });
+            
+            console.log('Conteo por cliente:', conteoClientes);
             
             // Clasificar por color
             const clientesSemaforo = Object.entries(conteoClientes)
@@ -884,6 +1057,20 @@
         }
 
         function renderSemaforos() {
+            console.log('🎨 Renderizando semáforos...');
+            
+            if (clientes.length === 0) {
+                console.warn('No hay clientes para mostrar');
+                document.getElementById('semaforo-grid').innerHTML = `
+                    <div class="col-span-full empty-state">
+                        <i class="fas fa-database"></i>
+                        <h3 class="text-lg font-semibold mb-2">No hay datos disponibles</h3>
+                        <p class="text-sm">La base de datos está vacía. Usa el botón "Cargar Datos de Prueba" arriba.</p>
+                    </div>
+                `;
+                return;
+            }
+            
             const data = getSemaforoData();
             
             // Actualizar contadores
@@ -901,10 +1088,12 @@
             // Renderizar grid
             const grid = document.getElementById('semaforo-grid');
             if (clientesAMostrar.length === 0) {
-                grid.innerHTML = `<div class="col-span-full text-center py-12 text-slate-500">
-                    <i class="fas fa-check-circle text-6xl text-emerald-300 mb-4"></i>
-                    <p class="text-lg">No hay clientes en esta categoría</p>
-                </div>`;
+                grid.innerHTML = `
+                    <div class="col-span-full empty-state">
+                        <i class="fas fa-check-circle text-emerald-300"></i>
+                        <h3 class="text-lg font-semibold mb-2">No hay clientes en esta categoría</h3>
+                    </div>
+                `;
             } else {
                 grid.innerHTML = clientesAMostrar.map(c => `
                     <div class="semaforo-card ${c.clase} relative" onclick="filterByCliente('${c.cliente}')">
@@ -931,21 +1120,26 @@
             // Renderizar top 10
             const topList = document.getElementById('top-clientes-list');
             const top10 = data.todos.slice(0, 10);
-            topList.innerHTML = top10.map((c, index) => `
-                <div class="flex items-center gap-3 p-3 rounded-lg ${index < 3 ? 'bg-red-50 border border-red-100' : 'bg-slate-50'}">
-                    <div class="w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${index < 3 ? 'bg-red-500 text-white' : 'bg-slate-200 text-slate-600'}">
-                        ${index + 1}
+            
+            if (top10.length === 0) {
+                topList.innerHTML = '<p class="text-center text-slate-400 py-4">No hay datos para mostrar</p>';
+            } else {
+                topList.innerHTML = top10.map((c, index) => `
+                    <div class="flex items-center gap-3 p-3 rounded-lg ${index < 3 ? 'bg-red-50 border border-red-100' : 'bg-slate-50'}">
+                        <div class="w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${index < 3 ? 'bg-red-500 text-white' : 'bg-slate-200 text-slate-600'}">
+                            ${index + 1}
+                        </div>
+                        <div class="flex-1">
+                            <p class="font-semibold text-slate-800">${c.cliente}</p>
+                            <p class="text-xs text-slate-500">${c.mensaje}</p>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-2xl font-bold ${c.color === 'rojo' ? 'text-red-600' : c.color === 'amarillo' ? 'text-yellow-600' : 'text-green-600'}">${c.count}</span>
+                            <p class="text-xs text-slate-400">reportes</p>
+                        </div>
                     </div>
-                    <div class="flex-1">
-                        <p class="font-semibold text-slate-800">${c.cliente}</p>
-                        <p class="text-xs text-slate-500">${c.mensaje}</p>
-                    </div>
-                    <div class="text-right">
-                        <span class="text-2xl font-bold ${c.color === 'rojo' ? 'text-red-600' : c.color === 'amarillo' ? 'text-yellow-600' : 'text-green-600'}">${c.count}</span>
-                        <p class="text-xs text-slate-400">reportes</p>
-                    </div>
-                </div>
-            `).join('');
+                `).join('');
+            }
             
             // Renderizar gráfico
             renderSemaforoChart(data.resumen);
@@ -995,15 +1189,21 @@
         }
 
         function filterByCliente(cliente) {
-            // Cambiar a pestaña de tickets y filtrar
             showTab('tickets');
-            // Aquí puedes agregar lógica adicional para filtrar tickets por cliente
             showToast(`Filtrando incidencias de: ${cliente}`, 'info');
         }
 
         // ==========================================
-        // RENDERIZADO
+        // RENDERIZADO GENERAL
         // ==========================================
+        function renderAll() {
+            renderDashboard();
+            renderTickets();
+            renderClientes();
+            renderSemaforos();
+            populateSelects();
+        }
+
         function renderDashboard() {
             document.getElementById('dash-total').textContent = tickets.length;
             document.getElementById('dash-atencion').textContent = tickets.filter(t => t.estatus === 'EN ATENCIÓN TÉCNICA').length;
@@ -1014,6 +1214,18 @@
         function renderTickets() {
             const tbody = document.getElementById('tickets-table-body');
             if (!tbody) return;
+            
+            if (tickets.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="px-4 py-8 text-center text-slate-500">
+                            <i class="fas fa-clipboard-list text-4xl mb-2"></i>
+                            <p>No hay incidencias registradas</p>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
             
             tbody.innerHTML = tickets.map(t => `
                 <tr class="hover:bg-slate-50">
@@ -1030,8 +1242,18 @@
             const container = document.getElementById('clientes-grid');
             if (!container) return;
             
+            if (clientes.length === 0) {
+                container.innerHTML = `
+                    <div class="col-span-full empty-state">
+                        <i class="fas fa-building"></i>
+                        <h3 class="text-lg font-semibold mb-2">No hay clientes registrados</h3>
+                    </div>
+                `;
+                return;
+            }
+            
             container.innerHTML = clientes.map(c => `
-                <div class="bg-white rounded-xl border border-slate-200 p-4">
+                <div class="bg-white rounded-xl border border-slate-200 p-4 hover:shadow-md transition-shadow">
                     <h4 class="font-bold text-slate-800">${c.nombre}</h4>
                     <p class="text-sm text-slate-500 mt-1">Tickets: ${tickets.filter(t => t.cliente === c.nombre).length}</p>
                 </div>
@@ -1087,8 +1309,19 @@
             }
         }
 
+        function getStatusClass(status) {
+            const classes = {
+                'SOLUCIONADO POR SOPORTE': 'status-solucionado',
+                'EN ATENCIÓN TÉCNICA': 'status-atencion',
+                'PENDIENTE POR CLIENTE': 'status-pendiente',
+                'EN SEGUIMIENTO': 'status-seguimiento',
+                'CERRADO': 'status-cerrado'
+            };
+            return classes[status] || 'status-pendiente';
+        }
+
         // ==========================================
-        // GUARDAR TICKET
+        // GUARDAR DATOS
         // ==========================================
         async function saveTicket(event) {
             event.preventDefault();
@@ -1122,9 +1355,6 @@
             }
         }
 
-        // ==========================================
-        // GUARDAR USUARIO (ADMIN)
-        // ==========================================
         async function saveUser(event) {
             event.preventDefault();
             
@@ -1143,7 +1373,6 @@
             };
             
             try {
-                // Crear usuario en auth
                 const { data: authData, error: authError } = await supabaseClient.auth.signUp({
                     email: userData.email,
                     password: userData.password,
@@ -1157,7 +1386,6 @@
                 
                 if (authError) throw authError;
                 
-                // Actualizar perfil con datos adicionales
                 const { error: updateError } = await supabaseClient
                     .from('profiles')
                     .update({
@@ -1182,16 +1410,12 @@
             }
         }
 
-        // ==========================================
-        // ELIMINAR USUARIO
-        // ==========================================
         async function deleteUser(userId) {
             if (!confirm('¿Estás seguro de eliminar este usuario? Esta acción no se puede deshacer.')) {
                 return;
             }
             
             try {
-                // Eliminar perfil primero
                 const { error: profileError } = await supabaseClient
                     .from('profiles')
                     .delete()
@@ -1211,16 +1435,10 @@
         // ==========================================
         // UTILIDADES
         // ==========================================
-        function showLoginScreen() {
-            document.getElementById('loginScreen').style.display = 'flex';
-            document.getElementById('mainApp').classList.add('hidden');
-        }
-
         function showMainApp() {
             document.getElementById('loginScreen').style.display = 'none';
             document.getElementById('mainApp').classList.remove('hidden');
             
-            // Configurar valores por defecto
             const fechaInput = document.getElementById('input-fecha');
             if (fechaInput) fechaInput.valueAsDate = new Date();
             
@@ -1253,17 +1471,6 @@
         function closeModal(modal) {
             const modalEl = document.getElementById(modal + 'Modal');
             if (modalEl) modalEl.classList.remove('active');
-        }
-
-        function getStatusClass(status) {
-            const classes = {
-                'SOLUCIONADO POR SOPORTE': 'status-solucionado',
-                'EN ATENCIÓN TÉCNICA': 'status-atencion',
-                'PENDIENTE POR CLIENTE': 'status-pendiente',
-                'EN SEGUIMIENTO': 'status-seguimiento',
-                'CERRADO': 'status-cerrado'
-            };
-            return classes[status] || 'status-pendiente';
         }
 
         function showError(msg) {
@@ -1313,6 +1520,8 @@
         window.createInitialAdmin = createInitialAdmin;
         window.filterSemaforo = filterSemaforo;
         window.filterByCliente = filterByCliente;
+        window.loadSampleData = loadSampleData;
+        window.checkConnection = checkConnection;
     </script>
 </body>
 </html>
