@@ -556,7 +556,7 @@
         </main>
     </div>
 
-    <!-- Modal Nueva Incidencia - COMPLETO CON TODOS LOS CAMPOS DEL CSV -->
+    <!-- Modal Nueva Incidencia - CORREGIDO CON NOMBRES DE BD REALES -->
     <div id="newTicketModal" class="modal">
         <div class="modal-content max-w-5xl">
             <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50 rounded-t-2xl">
@@ -599,8 +599,8 @@
                     </div>
                     <div class="grid grid-cols-2 gap-4 mt-4">
                         <div>
-                            <label class="block text-sm font-medium text-slate-700 mb-1">Método de Contacto <span class="text-red-500">*</span></label>
-                            <select id="select-metodo-contacto" required class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500">
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Método <span class="text-red-500">*</span></label>
+                            <select id="select-metodo" required class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500">
                                 <option value="">Seleccionar...</option>
                                 <option value="Respond IO">Respond IO</option>
                                 <option value="WhatsApp">WhatsApp</option>
@@ -610,8 +610,8 @@
                             </select>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-slate-700 mb-1">Responsable <span class="text-red-500">*</span></label>
-                            <select id="select-responsable" required class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500">
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Responsable</label>
+                            <select id="select-responsable" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500">
                                 <option value="">Seleccionar...</option>
                                 <option value="Uxmal">Uxmal</option>
                                 <option value="Cliente">Cliente</option>
@@ -619,7 +619,7 @@
                         </div>
                     </div>
                     <div class="mt-4">
-                        <label class="block text-sm font-medium text-slate-700 mb-1">Técnico Asignado</label>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Técnico</label>
                         <input type="text" id="input-tecnico" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500" placeholder="Nombre del técnico">
                     </div>
                 </div>
@@ -636,13 +636,13 @@
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-slate-700 mb-1">N° de Sucursal</label>
-                            <input type="text" id="input-num-sucursal" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500" placeholder="Ej: 001">
+                            <input type="text" id="input-sucursal-num" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500" placeholder="Ej: 001">
                         </div>
                     </div>
                     <div class="grid grid-cols-2 gap-4 mt-4">
                         <div>
                             <label class="block text-sm font-medium text-slate-700 mb-1">Nombre de Sucursal</label>
-                            <input type="text" id="input-nombre-sucursal" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500" placeholder="Nombre de la sucursal">
+                            <input type="text" id="input-sucursal-nombre" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500" placeholder="Nombre de la sucursal">
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-slate-700 mb-1">Ciudad</label>
@@ -660,7 +660,7 @@
                     <h4 class="form-section-title text-orange-800"><i class="fas fa-user"></i> Contacto del Cliente</h4>
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-sm font-medium text-slate-700 mb-1">Empleado que Reporta</label>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Empleado</label>
                             <input type="text" id="input-empleado" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500" placeholder="Nombre del empleado">
                         </div>
                         <div>
@@ -730,7 +730,7 @@
                     <h4 class="form-section-title text-yellow-800"><i class="fas fa-tasks"></i> Estatus y Seguimiento</h4>
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-sm font-medium text-slate-700 mb-1">Estatus de Incidente <span class="text-red-500">*</span></label>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Estatus <span class="text-red-500">*</span></label>
                             <select id="select-estatus" required class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500">
                                 <option value="EN ATENCIÓN TÉCNICA">En Atención Técnica</option>
                                 <option value="SOLUCIONADO POR SOPORTE">Solucionado por Soporte</option>
@@ -742,28 +742,13 @@
                             </select>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-slate-700 mb-1">Fecha de Asignación a 2° Nivel</label>
-                            <input type="date" id="input-fecha-asignacion-2do" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500">
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Fecha 2° Nivel</label>
+                            <input type="date" id="input-fecha-2nivel" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500">
                         </div>
                     </div>
                     <div class="mt-4">
-                        <label class="block text-sm font-medium text-slate-700 mb-1">Fecha de Cierre Técnico</label>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Fecha de Cierre</label>
                         <input type="date" id="input-fecha-cierre" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500">
-                    </div>
-                </div>
-
-                <!-- Sección: Equipos -->
-                <div class="form-section bg-gray-50">
-                    <h4 class="form-section-title text-gray-800"><i class="fas fa-tools"></i> Equipos</h4>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium text-slate-700 mb-1">Equipo Retirado</label>
-                            <input type="text" id="input-equipo-retirado" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500" placeholder="Descripción del equipo retirado">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-slate-700 mb-1">Equipo Instalado</label>
-                            <input type="text" id="input-equipo-instalado" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500" placeholder="Descripción del equipo instalado">
-                        </div>
                     </div>
                 </div>
 
@@ -1828,7 +1813,7 @@
         }
 
         // ==========================================
-        // GUARDAR DATOS - ACTUALIZADO CON TODOS LOS CAMPOS
+        // GUARDAR DATOS - CORREGIDO CON NOMBRES REALES DE BD
         // ==========================================
         async function saveTicket(event) {
             event.preventDefault();
@@ -1841,15 +1826,15 @@
                 
                 // Asignación
                 colaborador: document.getElementById('input-colaborador').value,
-                asignado_a: document.getElementById('input-asignado-a').value || null,
-                metodo_contacto: document.getElementById('select-metodo-contacto').value,
-                responsable: document.getElementById('select-responsable').value,
+                asignado_a: document.getElementById('input-asignado-a').value || '',
+                metodo: document.getElementById('select-metodo').value,
+                responsable: document.getElementById('select-responsable').value || null,
                 tecnico: document.getElementById('input-tecnico').value || null,
                 
                 // Cliente y Ubicación
                 cliente: document.getElementById('select-cliente').value,
-                num_sucursal: document.getElementById('input-num-sucursal').value || null,
-                nombre_sucursal: document.getElementById('input-nombre-sucursal').value || null,
+                sucursal_num: document.getElementById('input-sucursal-num').value || null,
+                sucursal_nombre: document.getElementById('input-sucursal-nombre').value || null,
                 ciudad: document.getElementById('input-ciudad').value || null,
                 estado: document.getElementById('input-estado').value || null,
                 
@@ -1864,20 +1849,11 @@
                 
                 // Estatus
                 estatus: document.getElementById('select-estatus').value,
-                fecha_asignacion_2do_nivel: document.getElementById('input-fecha-asignacion-2do').value || null,
-                fecha_cierre_tecnico: document.getElementById('input-fecha-cierre').value || null,
-                
-                // Equipos
-                equipo_retirado: document.getElementById('input-equipo-retirado').value || null,
-                equipo_instalado: document.getElementById('input-equipo-instalado').value || null,
+                fecha_2nivel: document.getElementById('input-fecha-2nivel').value || null,
+                fecha_cierre: document.getElementById('input-fecha-cierre').value || null,
                 
                 // Comentarios
-                comentarios: document.getElementById('input-comentarios').value || null,
-                
-                // Metadatos
-                metodo: 'Web',
-                created_at: new Date().toISOString()
-                // NOTA: Eliminado created_by que causaba el error
+                comentarios: document.getElementById('input-comentarios').value || null
             };
             
             try {
