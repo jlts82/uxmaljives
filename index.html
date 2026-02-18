@@ -205,6 +205,56 @@
         .ticket-prioridad-alta { border-left-color: #ef4444; }
         .ticket-prioridad-media { border-left-color: #f59e0b; }
         .ticket-prioridad-baja { border-left-color: #10b981; }
+
+        /* Estilos para tabla de incidencias */
+        .ticket-row {
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+        .ticket-row:hover {
+            background-color: #f8fafc;
+        }
+        .priority-urgent {
+            border-left: 3px solid #ef4444;
+            background-color: #fef2f2;
+        }
+        .priority-mine {
+            border-left: 3px solid #3b82f6;
+            background-color: #eff6ff;
+        }
+        
+        /* Export button */
+        .export-btn {
+            background: #10b981;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+        }
+        .export-btn:hover {
+            background: #059669;
+            transform: translateY(-1px);
+        }
+
+        /* User card styles */
+        .user-card {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 20px;
+            transition: all 0.2s;
+        }
+        .user-card:hover {
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            border-color: #3b82f6;
+        }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-800">
@@ -298,7 +348,7 @@
                     <i class="fas fa-chart-line w-5"></i> Dashboard General
                 </a>
                 <a href="#" onclick="showTab('tickets', this)" class="nav-item flex items-center gap-3 px-4 py-3 rounded-lg text-slate-300 hover:bg-slate-800 transition-colors">
-                    <i class="fas fa-clipboard-list w-5"></i> Incidencias
+                    <i class="fas fa-clipboard-list w-5"></i> Todas las Incidencias
                 </a>
                 <a href="#" onclick="showTab('mis-tickets', this)" class="nav-item flex items-center gap-3 px-4 py-3 rounded-lg text-slate-300 hover:bg-slate-800 transition-colors">
                     <i class="fas fa-user-check w-5"></i> Mis Tickets
@@ -410,8 +460,14 @@
             
             <!-- Dashboard General -->
             <div id="tab-dashboard" class="tab-content hidden">
-                <h2 class="text-2xl font-bold mb-6">Dashboard General</h2>
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold">Dashboard General</h2>
+                    <button onclick="exportToExcel()" class="export-btn">
+                        <i class="fas fa-file-excel"></i> Exportar Excel
+                    </button>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
                     <div class="bg-white rounded-xl p-6 border border-slate-200 shadow-sm">
                         <p class="text-xs font-medium text-slate-500 uppercase">Total Tickets</p>
                         <p class="text-3xl font-bold text-slate-800 mt-2" id="dash-total">0</p>
@@ -429,34 +485,78 @@
                         <p class="text-3xl font-bold text-amber-600 mt-2" id="dash-pendientes">0</p>
                     </div>
                 </div>
+
+                <!-- Gráficos del Dashboard -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                    <div class="bg-white rounded-xl border border-slate-200 p-6">
+                        <h3 class="text-lg font-bold text-slate-800 mb-4">Estadísticas por Colaborador</h3>
+                        <canvas id="chartColaboradores" height="200"></canvas>
+                    </div>
+                    <div class="bg-white rounded-xl border border-slate-200 p-6">
+                        <h3 class="text-lg font-bold text-slate-800 mb-4">Distribución por Estado</h3>
+                        <canvas id="chartEstados" height="200"></canvas>
+                    </div>
+                </div>
+
+                <!-- Últimas Incidencias -->
+                <div class="bg-white rounded-xl border border-slate-200 p-6">
+                    <h3 class="text-lg font-bold text-slate-800 mb-4">Últimas Incidencias</h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead class="bg-slate-50 border-b border-slate-200">
+                                <tr>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Folio</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Colaborador</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Asignado a</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Cliente</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Falla</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Estado</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Fecha</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dashboard-tickets-body" class="divide-y divide-slate-200"></tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
             
-            <!-- Tickets -->
+            <!-- Todas las Incidencias -->
             <div id="tab-tickets" class="tab-content hidden">
                 <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-2xl font-bold">Incidencias</h2>
-                    <button onclick="openModal('newTicket')" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2">
-                        <i class="fas fa-plus"></i> Nueva Incidencia
-                    </button>
+                    <h2 class="text-2xl font-bold">Todas las Incidencias</h2>
+                    <div class="flex gap-2">
+                        <button onclick="exportToExcel()" class="export-btn">
+                            <i class="fas fa-file-excel"></i> Exportar Excel
+                        </button>
+                        <button onclick="openModal('newTicket')" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2">
+                            <i class="fas fa-plus"></i> Nueva Incidencia
+                        </button>
+                    </div>
                 </div>
                 
                 <!-- Filtros de tickets -->
                 <div class="bg-white rounded-xl border border-slate-200 p-4 mb-6">
-                    <div class="flex flex-wrap gap-3 items-center">
-                        <span class="text-sm font-medium text-slate-700">Filtrar por:</span>
-                        <select id="filter-cliente-tickets" onchange="renderTickets()" class="px-3 py-2 border border-slate-300 rounded-lg text-sm">
-                            <option value="">Todos los clientes</option>
-                        </select>
-                        <select id="filter-estatus-tickets" onchange="renderTickets()" class="px-3 py-2 border border-slate-300 rounded-lg text-sm">
-                            <option value="">Todos los estatus</option>
-                            <option value="SOLUCIONADO POR SOPORTE">Solucionado</option>
-                            <option value="EN ATENCIÓN TÉCNICA">En Atención Técnica</option>
-                            <option value="PENDIENTE POR CLIENTE">Pendiente</option>
-                            <option value="EN SEGUIMIENTO">En Seguimiento</option>
-                        </select>
-                        <button onclick="clearTicketFilters()" class="text-slate-500 hover:text-slate-700 text-sm">
-                            <i class="fas fa-times-circle"></i> Limpiar filtros
-                        </button>
+                    <div class="flex flex-wrap gap-3 items-center justify-between">
+                        <div class="flex gap-2 flex-wrap">
+                            <button class="filter-chip active" onclick="filterByStatus('')">Todas</button>
+                            <button class="filter-chip" onclick="filterByStatus('SOLUCIONADO POR SOPORTE')">Solucionadas</button>
+                            <button class="filter-chip" onclick="filterByStatus('EN ATENCIÓN TÉCNICA')">Atención Técnica</button>
+                            <button class="filter-chip" onclick="filterByStatus('EN SEGUIMIENTO DE SOPORTE')">Seguimiento</button>
+                            <button class="filter-chip" onclick="filterByStatus('PENDIENTE POR CLIENTE')">Pendiente Cliente</button>
+                            <button class="filter-chip" onclick="filterByStatus('PENDIENTE POR COORDINACIÓN TÉCNICA')">Coordinación</button>
+                        </div>
+                        <div class="flex gap-3">
+                            <select id="filter-colaborador" onchange="applyFilters()" class="px-3 py-2 border border-slate-300 rounded-lg text-sm">
+                                <option value="">Colaborador</option>
+                            </select>
+                            <select id="filter-asignado" onchange="applyFilters()" class="px-3 py-2 border border-slate-300 rounded-lg text-sm">
+                                <option value="">Asignado a</option>
+                            </select>
+                            <select id="filter-cliente-tickets" onchange="applyFilters()" class="px-3 py-2 border border-slate-300 rounded-lg text-sm w-48">
+                                <option value="">Cliente</option>
+                            </select>
+                            <input type="text" id="search-input" placeholder="Buscar folio..." onkeyup="applyFilters()" class="px-4 py-2 border border-slate-300 rounded-lg text-sm w-48">
+                        </div>
                     </div>
                 </div>
                 
@@ -465,7 +565,9 @@
                         <thead class="bg-slate-50 border-b border-slate-200">
                             <tr>
                                 <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Folio</th>
-                                <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Cliente</th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Colaborador</th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Asignado a</th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Cliente/Sucursal</th>
                                 <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Falla</th>
                                 <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Estado</th>
                                 <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Fecha</th>
@@ -476,10 +578,10 @@
                 </div>
             </div>
 
-            <!-- MIS TICKETS - NUEVA SECCIÓN -->
+            <!-- MIS TICKETS - SECCIÓN COMPLETA -->
             <div id="tab-mis-tickets" class="tab-content hidden">
                 <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-2xl font-bold"><i class="fas fa-user-check mr-2 text-blue-600"></i>Mis Tickets Asignados</h2>
+                    <h2 class="text-2xl font-bold"><i class="fas fa-user-check mr-2 text-blue-600"></i>Mis Tickets</h2>
                     <div class="flex gap-2">
                         <span class="bg-blue-100 text-blue-800 px-4 py-2 rounded-lg text-sm font-medium">
                             <i class="fas fa-user mr-1"></i> <span id="current-user-name">Usuario</span>
@@ -507,16 +609,24 @@
                     </div>
                 </div>
 
-                <!-- Lista de tickets asignados -->
-                <div class="bg-white rounded-xl border border-slate-200 p-6">
-                    <h3 class="text-lg font-bold text-slate-800 mb-4">Tickets en los que participo</h3>
-                    <div id="mis-tickets-list" class="space-y-3">
-                        <!-- Aquí se renderizan los tickets asignados -->
+                <!-- Tickets que requieren mi atención -->
+                <div class="bg-white rounded-xl border border-slate-200 p-6 mb-6">
+                    <h3 class="text-lg font-bold text-slate-800 mb-4">Tickets que Requieren mi Seguimiento</h3>
+                    <div id="mis-tickets-activos-list" class="space-y-3">
+                        <!-- Aquí se renderizan los tickets activos -->
+                    </div>
+                </div>
+
+                <!-- Historial de tickets resueltos -->
+                <div class="bg-white rounded-xl border border-slate-200 p-6 mb-6">
+                    <h3 class="text-lg font-bold text-slate-800 mb-4">Historial de Tickets Resueltos</h3>
+                    <div id="mis-tickets-resueltos-list" class="space-y-3">
+                        <!-- Aquí se renderizan los tickets resueltos -->
                     </div>
                 </div>
 
                 <!-- Tickets que asigné a otros -->
-                <div class="bg-white rounded-xl border border-slate-200 p-6 mt-6">
+                <div class="bg-white rounded-xl border border-slate-200 p-6">
                     <h3 class="text-lg font-bold text-slate-800 mb-4">Tickets que he asignado a otros</h3>
                     <div id="tickets-asignados-otros-list" class="space-y-3">
                         <!-- Aquí se renderizan los tickets asignados a otros -->
@@ -526,7 +636,12 @@
             
             <!-- Clientes -->
             <div id="tab-clientes" class="tab-content hidden">
-                <h2 class="text-2xl font-bold mb-6">Clientes</h2>
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold">Clientes</h2>
+                    <div class="flex gap-3">
+                        <input type="text" id="search-clientes" placeholder="Buscar cliente..." onkeyup="renderClientes()" class="px-4 py-2 border border-slate-300 rounded-lg text-sm w-64">
+                    </div>
+                </div>
                 <div id="clientes-grid" class="grid grid-cols-1 md:grid-cols-3 gap-4"></div>
             </div>
             
@@ -538,25 +653,29 @@
                         <i class="fas fa-user-plus"></i> Nuevo Usuario
                     </button>
                 </div>
-                <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
-                    <table class="w-full">
-                        <thead class="bg-slate-50 border-b border-slate-200">
-                            <tr>
-                                <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Usuario</th>
-                                <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Email</th>
-                                <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Rol</th>
-                                <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Estado</th>
-                                <th class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody id="users-table-body" class="divide-y divide-slate-200"></tbody>
-                    </table>
+
+                <!-- Estadísticas de usuarios -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <div class="bg-slate-50 rounded-lg p-4 border border-slate-200">
+                        <p class="text-sm text-slate-500">Total Usuarios</p>
+                        <p class="text-2xl font-bold text-slate-800" id="total-usuarios">0</p>
+                    </div>
+                    <div class="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                        <p class="text-sm text-blue-600">Administradores</p>
+                        <p class="text-2xl font-bold text-blue-800" id="total-admins">0</p>
+                    </div>
+                    <div class="bg-emerald-50 rounded-lg p-4 border border-emerald-200">
+                        <p class="text-sm text-emerald-600">Clientes</p>
+                        <p class="text-2xl font-bold text-emerald-800" id="total-clientes-users">0</p>
+                    </div>
                 </div>
+
+                <div id="usuarios-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
             </div>
         </main>
     </div>
 
-    <!-- Modal Nueva Incidencia - CORREGIDO CON NOMBRES DE BD REALES -->
+    <!-- Modal Nueva Incidencia - CON SELECT DE CLIENTES COMPLETO -->
     <div id="newTicketModal" class="modal">
         <div class="modal-content max-w-5xl">
             <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50 rounded-t-2xl">
@@ -589,7 +708,7 @@
                     <h4 class="form-section-title text-purple-800"><i class="fas fa-users"></i> Asignación</h4>
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-sm font-medium text-slate-700 mb-1">Colaborador <span class="text-red-500">*</span></label>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Colaborador (Creador) <span class="text-red-500">*</span></label>
                             <input type="text" id="input-colaborador" required class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500" placeholder="Nombre del colaborador">
                         </div>
                         <div>
@@ -624,34 +743,36 @@
                     </div>
                 </div>
 
-                <!-- Sección: Cliente y Ubicación -->
+                <!-- Sección: Cliente y Ubicación - SELECT COMPLETO -->
                 <div class="form-section bg-green-50">
                     <h4 class="form-section-title text-green-800"><i class="fas fa-building"></i> Cliente y Ubicación</h4>
                     <div class="grid grid-cols-2 gap-4">
-                        <div>
+                        <div class="col-span-2">
                             <label class="block text-sm font-medium text-slate-700 mb-1">Cliente <span class="text-red-500">*</span></label>
-                            <select id="select-cliente" required class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500">
+                            <select id="select-cliente" required class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500 text-sm">
                                 <option value="">Seleccionar cliente...</option>
+                                <!-- Se llenará dinámicamente con todos los clientes -->
                             </select>
+                            <p class="text-xs text-slate-500 mt-1">Lista completa de clientes disponibles</p>
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-slate-700 mb-1">N° de Sucursal</label>
                             <input type="text" id="input-sucursal-num" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500" placeholder="Ej: 001">
                         </div>
-                    </div>
-                    <div class="grid grid-cols-2 gap-4 mt-4">
                         <div>
                             <label class="block text-sm font-medium text-slate-700 mb-1">Nombre de Sucursal</label>
                             <input type="text" id="input-sucursal-nombre" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500" placeholder="Nombre de la sucursal">
                         </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4 mt-4">
                         <div>
                             <label class="block text-sm font-medium text-slate-700 mb-1">Ciudad</label>
                             <input type="text" id="input-ciudad" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500" placeholder="Ciudad">
                         </div>
-                    </div>
-                    <div class="mt-4">
-                        <label class="block text-sm font-medium text-slate-700 mb-1">Estado</label>
-                        <input type="text" id="input-estado" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500" placeholder="Estado">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Estado</label>
+                            <input type="text" id="input-estado" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500" placeholder="Estado">
+                        </div>
                     </div>
                 </div>
 
@@ -678,6 +799,14 @@
                             <label class="block text-sm font-medium text-slate-700 mb-1">Falla <span class="text-red-500">*</span></label>
                             <select id="select-falla" required class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500">
                                 <option value="">Seleccionar falla...</option>
+                                <option value="SIN AUDIO">SIN AUDIO</option>
+                                <option value="SIN VIDEO">SIN VIDEO</option>
+                                <option value="SIN AUDIO Y VIDEO">SIN AUDIO Y VIDEO</option>
+                                <option value="CONTENIDO">CONTENIDO</option>
+                                <option value="FALLA DE APP">FALLA DE APP</option>
+                                <option value="INCIDENCIA CON AUDIO">INCIDENCIA CON AUDIO</option>
+                                <option value="INCIDENCIA CON VIDEO">INCIDENCIA CON VIDEO</option>
+                                <option value="SIN CONEXIÓN">SIN CONEXIÓN</option>
                             </select>
                         </div>
                         <div>
@@ -735,10 +864,13 @@
                                 <option value="EN ATENCIÓN TÉCNICA">En Atención Técnica</option>
                                 <option value="SOLUCIONADO POR SOPORTE">Solucionado por Soporte</option>
                                 <option value="PENDIENTE POR CLIENTE">Pendiente por Cliente</option>
-                                <option value="EN SEGUIMIENTO">En Seguimiento</option>
                                 <option value="EN SEGUIMIENTO DE SOPORTE">En Seguimiento de Soporte</option>
+                                <option value="PENDIENTE POR COORDINACIÓN TÉCNICA">Pendiente por Coordinación Técnica</option>
                                 <option value="CERRADO">Cerrado</option>
                                 <option value="ACTIVACIÓN DE SERVICIO">Activación de Servicio</option>
+                                <option value="BAJA DE SERVICIO">Baja de Servicio</option>
+                                <option value="PREVENTIVO">Preventivo</option>
+                                <option value="LEVANTAMIENTO">Levantamiento</option>
                             </select>
                         </div>
                         <div>
@@ -835,7 +967,17 @@
         let allUsers = [];
         let semaforoFilter = 'todos';
         let charts = {};
-        let currentTicketFilter = { cliente: '', estatus: '' };
+        let currentFilter = '';
+
+        // Colores para colaboradores (para consistencia visual)
+        const collaboratorColors = {
+            'Daniela': 'bg-pink-500',
+            'Fernanda': 'bg-purple-500',
+            'Ulises': 'bg-blue-500',
+            'Jazbeth': 'bg-orange-500',
+            'Jose Manuel': 'bg-green-500',
+            'Jose Luis': 'bg-teal-500'
+        };
 
         // ==========================================
         // INICIALIZACIÓN
@@ -857,6 +999,7 @@
                 await checkInitialSetup();
             }
             
+            // Event listener para cambio de rol en formulario de usuario
             document.getElementById('user-role')?.addEventListener('change', function() {
                 const container = document.getElementById('cliente-asignado-container');
                 if (this.value === 'cliente') {
@@ -1079,7 +1222,8 @@
                 const { data: clientesData, error: clientesError } = await supabaseClient
                     .from('clientes')
                     .select('*')
-                    .eq('activo', true);
+                    .eq('activo', true)
+                    .order('nombre', { ascending: true });
                 
                 if (clientesError) {
                     console.error('❌ Error clientes:', clientesError);
@@ -1102,20 +1246,11 @@
                 catalogos = catalogosData || [];
                 console.log('✅ Catálogos cargados:', catalogos.length);
 
-                // Cargar tickets
+                // Cargar tickets - SIN FILTROS para tener todos disponibles
                 console.log('⏳ Cargando tickets...');
-                let query = supabaseClient.from('tickets').select('*');
-                
-                if (currentProfile.role === 'colaborador') {
-                    query = query.or(`colaborador.eq.${currentProfile.full_name},asignado_a.eq.${currentProfile.full_name}`);
-                } else if (currentProfile.role === 'cliente') {
-                    const cliente = clientes.find(c => c.id === currentProfile.cliente_asignado);
-                    if (cliente) {
-                        query = query.eq('cliente', cliente.nombre);
-                    }
-                }
-                
-                const { data: ticketsData, error: ticketsError } = await query
+                const { data: ticketsData, error: ticketsError } = await supabaseClient
+                    .from('tickets')
+                    .select('*')
                     .order('created_at', { ascending: false });
                 
                 if (ticketsError) {
@@ -1124,14 +1259,6 @@
                 }
                 tickets = ticketsData || [];
                 console.log('✅ Tickets cargados:', tickets.length);
-
-                // Verificar si hay datos
-                if (clientes.length === 0 || tickets.length === 0) {
-                    console.warn('⚠️ No hay datos suficientes para mostrar semáforos');
-                    document.getElementById('no-data-alert').classList.remove('hidden');
-                } else {
-                    document.getElementById('no-data-alert').classList.add('hidden');
-                }
 
                 // Cargar usuarios si es admin
                 if (currentProfile.role === 'admin') {
@@ -1230,7 +1357,7 @@
                         asignado_a: 'Daniela',
                         cliente: 'APPLEBEES',
                         falla: 'SIN VIDEO',
-                        estatus: 'EN SEGUIMIENTO',
+                        estatus: 'EN SEGUIMIENTO DE SOPORTE',
                         comentarios: 'Ticket de prueba',
                         metodo: 'Web',
                         responsable: 'Uxmal'
@@ -1467,32 +1594,24 @@
         }
 
         // ==========================================
-        // NAVEGACIÓN Y FILTRADO CORREGIDO
+        // NAVEGACIÓN Y FILTRADO
         // ==========================================
         function verCliente(nombreCliente) {
             console.log('👤 Ver cliente:', nombreCliente);
             
-            // Guardar el filtro
-            currentTicketFilter.cliente = nombreCliente;
-            
             // Cambiar a pestaña de tickets
             const ticketsNav = document.querySelector('[onclick*="tickets"]');
             if (ticketsNav) {
-                // Remover active de todos
                 document.querySelectorAll('.nav-item').forEach(n => {
                     n.classList.remove('active', 'bg-blue-600', 'text-white');
                     n.classList.add('text-slate-300');
                 });
                 
-                // Activar tickets
                 ticketsNav.classList.add('active', 'bg-blue-600', 'text-white');
                 ticketsNav.classList.remove('text-slate-300');
             }
             
-            // Ocultar todas las pestañas
             document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-            
-            // Mostrar tickets
             const ticketsTab = document.getElementById('tab-tickets');
             if (ticketsTab) {
                 ticketsTab.classList.add('active');
@@ -1504,17 +1623,10 @@
                 filterSelect.value = nombreCliente;
             }
             
-            // Renderizar tickets filtrados
+            // Aplicar filtro
             renderTickets();
             
             showToast(`Mostrando tickets de: ${nombreCliente}`, 'info');
-        }
-
-        function clearTicketFilters() {
-            currentTicketFilter = { cliente: '', estatus: '' };
-            document.getElementById('filter-cliente-tickets').value = '';
-            document.getElementById('filter-estatus-tickets').value = '';
-            renderTickets();
         }
 
         // ==========================================
@@ -1527,7 +1639,7 @@
             renderClientes();
             renderSemaforos();
             populateSelects();
-            populateTicketFilters();
+            populateFilters();
         }
 
         function renderDashboard() {
@@ -1535,17 +1647,109 @@
             document.getElementById('dash-atencion').textContent = tickets.filter(t => t.estatus === 'EN ATENCIÓN TÉCNICA').length;
             document.getElementById('dash-solucionados').textContent = tickets.filter(t => t.estatus === 'SOLUCIONADO POR SOPORTE').length;
             document.getElementById('dash-pendientes').textContent = tickets.filter(t => t.estatus === 'PENDIENTE POR CLIENTE').length;
+
+            // Renderizar últimas incidencias en dashboard
+            const tbody = document.getElementById('dashboard-tickets-body');
+            const recentTickets = tickets.slice(0, 10);
+            
+            tbody.innerHTML = recentTickets.map(ticket => {
+                const statusClass = getStatusClass(ticket.estatus);
+                const colColor = collaboratorColors[ticket.colaborador] || 'bg-slate-500';
+                const asigColor = collaboratorColors[ticket.asignado_a] || 'bg-slate-500';
+
+                return `<tr class="ticket-row" onclick="viewTicket('${ticket.folio}')">
+                    <td class="px-4 py-3 font-bold text-slate-700">${ticket.folio}</td>
+                    <td class="px-4 py-3"><div class="flex items-center gap-2">
+                        <div class="w-6 h-6 ${colColor} rounded-full flex items-center justify-center text-white text-xs font-bold">${ticket.colaborador?.substring(0, 2).toUpperCase() || '??'}</div>
+                        <span class="text-sm">${ticket.colaborador}</span>
+                    </div></td>
+                    <td class="px-4 py-3"><div class="flex items-center gap-2">
+                        <div class="w-6 h-6 ${asigColor} rounded-full flex items-center justify-center text-white text-xs font-bold">${ticket.asignado_a?.substring(0, 2).toUpperCase() || '??'}</div>
+                        <span class="text-sm">${ticket.asignado_a}</span>
+                    </div></td>
+                    <td class="px-4 py-3"><p class="font-semibold text-slate-800 text-sm">${ticket.cliente}</p></td>
+                    <td class="px-4 py-3"><span class="text-sm font-medium text-slate-700">${ticket.falla}</span></td>
+                    <td class="px-4 py-3"><span class="status-badge ${statusClass}"><span class="w-1.5 h-1.5 rounded-full bg-current"></span>${formatStatus(ticket.estatus)}</span></td>
+                    <td class="px-4 py-3 text-sm text-slate-600">${ticket.fecha}</td>
+                </tr>`;
+            }).join('');
+
+            // Renderizar gráficos del dashboard
+            renderDashboardCharts();
+        }
+
+        function renderDashboardCharts() {
+            // Gráfico de colaboradores
+            if (charts.colaboradores) charts.colaboradores.destroy();
+
+            const colaboradorCounts = {};
+            tickets.forEach(t => {
+                const col = t.asignado_a || 'Sin asignar';
+                colaboradorCounts[col] = (colaboradorCounts[col] || 0) + 1;
+            });
+
+            const ctxCol = document.getElementById('chartColaboradores').getContext('2d');
+            charts.colaboradores = new Chart(ctxCol, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(colaboradorCounts),
+                    datasets: [{
+                        label: 'Tickets Asignados',
+                        data: Object.values(colaboradorCounts),
+                        backgroundColor: ['#ec4899', '#a855f7', '#3b82f6', '#f97316', '#22c55e', '#14b8a6'],
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+                }
+            });
+
+            // Gráfico de estados
+            if (charts.estados) charts.estados.destroy();
+
+            const estadoCounts = {};
+            const estados = ['SOLUCIONADO POR SOPORTE', 'EN ATENCIÓN TÉCNICA', 'PENDIENTE POR CLIENTE', 'EN SEGUIMIENTO DE SOPORTE', 'CERRADO'];
+            estados.forEach(est => estadoCounts[formatStatus(est)] = 0);
+            
+            tickets.forEach(t => {
+                const shortStatus = formatStatus(t.estatus);
+                if (estadoCounts[shortStatus] !== undefined) {
+                    estadoCounts[shortStatus]++;
+                }
+            });
+
+            const ctxEst = document.getElementById('chartEstados').getContext('2d');
+            charts.estados = new Chart(ctxEst, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(estadoCounts),
+                    datasets: [{
+                        data: Object.values(estadoCounts),
+                        backgroundColor: ['#10b981', '#ef4444', '#f59e0b', '#f59e0b', '#3730a3'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { position: 'right', labels: { boxWidth: 12, font: { size: 10 } } }
+                    }
+                }
+            });
         }
 
         // ==========================================
-        // MIS TICKETS - NUEVA FUNCIÓN
+        // MIS TICKETS - FUNCIÓN COMPLETA CORREGIDA
         // ==========================================
         function renderMisTickets() {
             if (!currentProfile) return;
             
             const myName = currentProfile.full_name;
             
-            // Tickets donde soy el colaborador o estoy asignado
+            // Tickets donde soy el colaborador O estoy asignado
             const misTickets = tickets.filter(t => 
                 t.colaborador === myName || 
                 t.asignado_a === myName
@@ -1558,34 +1762,46 @@
                 t.asignado_a !== myName
             );
             
+            // Separar activos y resueltos
+            const activos = misTickets.filter(t => 
+                t.estatus !== 'SOLUCIONADO POR SOPORTE' && 
+                t.estatus !== 'CERRADO' && 
+                t.estatus !== 'BAJA DE SERVICIO'
+            );
+            
+            const resueltos = misTickets.filter(t => 
+                t.estatus === 'SOLUCIONADO POR SOPORTE' || 
+                t.estatus === 'CERRADO'
+            );
+            
             // Actualizar contadores en la UI
             document.getElementById('mis-total').textContent = misTickets.length;
             document.getElementById('mis-atencion').textContent = misTickets.filter(t => t.estatus === 'EN ATENCIÓN TÉCNICA').length;
-            document.getElementById('mis-solucionados').textContent = misTickets.filter(t => t.estatus === 'SOLUCIONADO POR SOPORTE').length;
+            document.getElementById('mis-solucionados').textContent = resueltos.length;
             document.getElementById('mis-pendientes').textContent = misTickets.filter(t => t.estatus === 'PENDIENTE POR CLIENTE').length;
             
             // Actualizar badge en el menú
             const menuBadge = document.getElementById('mis-tickets-count');
             if (menuBadge) {
-                if (misTickets.length > 0) {
-                    menuBadge.textContent = misTickets.length;
+                if (activos.length > 0) {
+                    menuBadge.textContent = activos.length;
                     menuBadge.classList.remove('hidden');
                 } else {
                     menuBadge.classList.add('hidden');
                 }
             }
             
-            // Renderizar mis tickets
-            const container = document.getElementById('mis-tickets-list');
-            if (misTickets.length === 0) {
-                container.innerHTML = `
+            // Renderizar tickets activos
+            const containerActivos = document.getElementById('mis-tickets-activos-list');
+            if (activos.length === 0) {
+                containerActivos.innerHTML = `
                     <div class="empty-state py-8">
-                        <i class="fas fa-clipboard-check text-4xl text-slate-300"></i>
-                        <p class="text-slate-500 mt-2">No tienes tickets asignados</p>
+                        <i class="fas fa-check-circle text-4xl text-emerald-300"></i>
+                        <p class="text-slate-500 mt-2">No tienes tickets pendientes. ¡Buen trabajo!</p>
                     </div>
                 `;
             } else {
-                container.innerHTML = misTickets.map(t => {
+                containerActivos.innerHTML = activos.map(t => {
                     let prioridadClass = 'ticket-prioridad-baja';
                     if (t.estatus === 'EN ATENCIÓN TÉCNICA') prioridadClass = 'ticket-prioridad-alta';
                     else if (t.estatus === 'PENDIENTE POR CLIENTE') prioridadClass = 'ticket-prioridad-media';
@@ -1599,6 +1815,7 @@
                             <div>
                                 <span class="font-bold text-slate-800">${t.folio}</span>
                                 <span class="text-sm text-slate-500 ml-2">${t.cliente}</span>
+                                ${t.sucursal_nombre ? `<span class="text-xs text-slate-400 ml-2">- ${t.sucursal_nombre}</span>` : ''}
                             </div>
                             <span class="status-badge ${getStatusClass(t.estatus)}">${t.estatus}</span>
                         </div>
@@ -1613,6 +1830,35 @@
                         </div>
                     </div>
                 `}).join('');
+            }
+            
+            // Renderizar tickets resueltos
+            const containerResueltos = document.getElementById('mis-tickets-resueltos-list');
+            if (resueltos.length === 0) {
+                containerResueltos.innerHTML = `
+                    <div class="empty-state py-8">
+                        <i class="fas fa-clipboard-check text-4xl text-slate-300"></i>
+                        <p class="text-slate-500 mt-2">Aún no tienes tickets resueltos</p>
+                    </div>
+                `;
+            } else {
+                containerResueltos.innerHTML = resueltos.slice(0, 10).map(t => `
+                    <div class="ticket-asignado-item border-l-4 border-emerald-500 bg-emerald-50">
+                        <div class="flex justify-between items-start mb-2">
+                            <div>
+                                <span class="font-bold text-slate-800">${t.folio}</span>
+                                <span class="text-sm text-slate-500 ml-2">${t.cliente}</span>
+                            </div>
+                            <span class="status-badge ${getStatusClass(t.estatus)}">${t.estatus}</span>
+                        </div>
+                        <p class="text-sm text-slate-600 mb-2"><strong>Falla:</strong> ${t.falla}</p>
+                        ${t.solucion ? `<p class="text-sm text-emerald-600 mb-2"><strong>Solución:</strong> ${t.solucion}</p>` : ''}
+                        <div class="flex justify-between items-center text-xs text-slate-500">
+                            <span><i class="fas fa-check-circle mr-1 text-emerald-500"></i>Resuelto</span>
+                            <span>${t.fecha_cierre || t.fecha}</span>
+                        </div>
+                    </div>
+                `).join('');
             }
             
             // Renderizar tickets asignados a otros
@@ -1646,60 +1892,136 @@
             }
         }
 
-        function populateTicketFilters() {
-            const clienteFilter = document.getElementById('filter-cliente-tickets');
-            if (clienteFilter) {
-                clienteFilter.innerHTML = '<option value="">Todos los clientes</option>' +
+        // ==========================================
+        // TODAS LAS INCIDENCIAS - CON FILTROS COMPLETOS
+        // ==========================================
+        function populateFilters() {
+            // Poblar select de colaboradores
+            const colaboradores = [...new Set(tickets.map(t => t.colaborador).filter(Boolean))];
+            const colSelect = document.getElementById('filter-colaborador');
+            if (colSelect) {
+                colSelect.innerHTML = '<option value="">Colaborador</option>' +
+                    colaboradores.map(col => `<option value="${col}">${col}</option>`).join('');
+            }
+
+            // Poblar select de asignados
+            const asignados = [...new Set(tickets.map(t => t.asignado_a).filter(Boolean))];
+            const asigSelect = document.getElementById('filter-asignado');
+            if (asigSelect) {
+                asigSelect.innerHTML = '<option value="">Asignado a</option>' +
+                    asignados.map(asi => `<option value="${asi}">${asi}</option>`).join('');
+            }
+
+            // Poblar select de clientes
+            const cliSelect = document.getElementById('filter-cliente-tickets');
+            if (cliSelect) {
+                cliSelect.innerHTML = '<option value="">Cliente</option>' +
                     clientes.map(c => `<option value="${c.nombre}">${c.nombre}</option>`).join('');
             }
+        }
+
+        function filterByStatus(status) {
+            currentFilter = status;
+            
+            // Actualizar chips visuales
+            document.querySelectorAll('.filter-chip').forEach(chip => chip.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            renderTickets();
+        }
+
+        function applyFilters() {
+            renderTickets();
         }
 
         function renderTickets() {
             const tbody = document.getElementById('tickets-table-body');
             if (!tbody) return;
             
-            // Obtener filtros actuales
-            const filtroCliente = document.getElementById('filter-cliente-tickets')?.value || currentTicketFilter.cliente;
-            const filtroEstatus = document.getElementById('filter-estatus-tickets')?.value || currentTicketFilter.estatus;
+            // Obtener valores de filtros
+            const filtroColaborador = document.getElementById('filter-colaborador')?.value || '';
+            const filtroAsignado = document.getElementById('filter-asignado')?.value || '';
+            const filtroCliente = document.getElementById('filter-cliente-tickets')?.value || '';
+            const filtroBusqueda = document.getElementById('search-input')?.value.toLowerCase() || '';
             
             // Filtrar tickets
             let ticketsFiltrados = tickets;
+            
+            if (currentFilter) {
+                ticketsFiltrados = ticketsFiltrados.filter(t => t.estatus === currentFilter);
+            }
+            if (filtroColaborador) {
+                ticketsFiltrados = ticketsFiltrados.filter(t => t.colaborador === filtroColaborador);
+            }
+            if (filtroAsignado) {
+                ticketsFiltrados = ticketsFiltrados.filter(t => t.asignado_a === filtroAsignado);
+            }
             if (filtroCliente) {
                 ticketsFiltrados = ticketsFiltrados.filter(t => t.cliente === filtroCliente);
             }
-            if (filtroEstatus) {
-                ticketsFiltrados = ticketsFiltrados.filter(t => t.estatus === filtroEstatus);
+            if (filtroBusqueda) {
+                ticketsFiltrados = ticketsFiltrados.filter(t => 
+                    t.folio.toLowerCase().includes(filtroBusqueda) || 
+                    t.cliente.toLowerCase().includes(filtroBusqueda)
+                );
             }
             
             if (ticketsFiltrados.length === 0) {
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="5" class="px-4 py-8 text-center text-slate-500">
+                        <td colspan="7" class="px-4 py-8 text-center text-slate-500">
                             <i class="fas fa-clipboard-list text-4xl mb-2"></i>
-                            <p>No hay incidencias registradas</p>
-                            ${filtroCliente || filtroEstatus ? '<p class="text-sm mt-2">Intenta limpiar los filtros</p>' : ''}
+                            <p>No hay incidencias que coincidan con los filtros</p>
                         </td>
                     </tr>
                 `;
                 return;
             }
             
-            tbody.innerHTML = ticketsFiltrados.map(t => `
-                <tr class="hover:bg-slate-50">
+            const myName = currentProfile?.full_name;
+            
+            tbody.innerHTML = ticketsFiltrados.map(t => {
+                const statusClass = getStatusClass(t.estatus);
+                const colColor = collaboratorColors[t.colaborador] || 'bg-slate-500';
+                const asigColor = collaboratorColors[t.asignado_a] || 'bg-slate-500';
+                const isUrgent = t.estatus === 'EN ATENCIÓN TÉCNICA';
+                const isMine = t.asignado_a === myName || t.colaborador === myName;
+                
+                return `<tr class="ticket-row ${isUrgent ? 'priority-urgent' : ''} ${isMine ? 'priority-mine' : ''}" onclick="viewTicket('${t.folio}')">
                     <td class="px-4 py-3 font-bold text-slate-700">${t.folio}</td>
-                    <td class="px-4 py-3 text-sm text-slate-600">${t.cliente}</td>
-                    <td class="px-4 py-3 text-sm text-slate-600">${t.falla}</td>
-                    <td class="px-4 py-3"><span class="status-badge ${getStatusClass(t.estatus)}">${t.estatus}</span></td>
-                    <td class="px-4 py-3 text-sm text-slate-500">${t.fecha}</td>
-                </tr>
-            `).join('');
+                    <td class="px-4 py-3"><div class="flex items-center gap-2">
+                        <div class="w-6 h-6 ${colColor} rounded-full flex items-center justify-center text-white text-xs font-bold">${t.colaborador?.substring(0, 2).toUpperCase() || '??'}</div>
+                        <span class="text-sm">${t.colaborador}</span>
+                    </div></td>
+                    <td class="px-4 py-3"><div class="flex items-center gap-2">
+                        <div class="w-6 h-6 ${asigColor} rounded-full flex items-center justify-center text-white text-xs font-bold">${t.asignado_a?.substring(0, 2).toUpperCase() || '??'}</div>
+                        <span class="text-sm">${t.asignado_a}</span>
+                        ${isMine ? '<span class="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">Tú</span>' : ''}
+                    </div></td>
+                    <td class="px-4 py-3"><p class="font-semibold text-slate-800 text-sm">${t.cliente}</p>
+                        <p class="text-xs text-slate-500">${t.sucursal_nombre || 'Sin sucursal'}</p></td>
+                    <td class="px-4 py-3"><span class="text-sm font-medium text-slate-700">${t.falla}</span></td>
+                    <td class="px-4 py-3"><span class="status-badge ${statusClass}"><span class="w-1.5 h-1.5 rounded-full bg-current"></span>${formatStatus(t.estatus)}</span></td>
+                    <td class="px-4 py-3 text-sm text-slate-600">${t.fecha}</td>
+                </tr>`;
+            }).join('');
         }
 
+        function viewTicket(folio) {
+            // TODO: Implementar vista/edición de ticket
+            showToast(`Ver detalle de ${folio} - Función en desarrollo`, 'info');
+        }
+
+        // ==========================================
+        // CLIENTES
+        // ==========================================
         function renderClientes() {
+            const search = document.getElementById('search-clientes')?.value.toLowerCase() || '';
             const container = document.getElementById('clientes-grid');
-            if (!container) return;
             
-            if (clientes.length === 0) {
+            const filtered = clientes.filter(c => c.nombre.toLowerCase().includes(search));
+            
+            if (filtered.length === 0) {
                 container.innerHTML = `
                     <div class="col-span-full empty-state">
                         <i class="fas fa-building"></i>
@@ -1709,57 +2031,78 @@
                 return;
             }
             
-            container.innerHTML = clientes.map(c => `
-                <div class="bg-white rounded-xl border border-slate-200 p-4 hover:shadow-md transition-shadow cursor-pointer" onclick="verCliente('${c.nombre}')">
+            container.innerHTML = filtered.map(c => {
+                const incidencias = tickets.filter(t => t.cliente === c.nombre).length;
+                return `<div class="bg-white rounded-xl border border-slate-200 p-4 hover:shadow-md transition-shadow cursor-pointer" onclick="verCliente('${c.nombre}')">
                     <h4 class="font-bold text-slate-800">${c.nombre}</h4>
-                    <p class="text-sm text-slate-500 mt-1">Tickets: ${tickets.filter(t => t.cliente === c.nombre).length}</p>
+                    <p class="text-sm text-slate-500 mt-1">Tickets: ${incidencias}</p>
                     <button class="mt-3 text-blue-600 text-sm hover:underline">Ver tickets <i class="fas fa-arrow-right"></i></button>
-                </div>
-            `).join('');
+                </div>`;
+            }).join('');
         }
 
+        // ==========================================
+        // USUARIOS - GESTIÓN COMPLETA
+        // ==========================================
         function renderUsers() {
-            const tbody = document.getElementById('users-table-body');
-            if (!tbody) return;
+            const container = document.getElementById('usuarios-grid');
             
-            tbody.innerHTML = allUsers.map(u => {
+            const totalUsuarios = allUsers.length;
+            const totalAdmins = allUsers.filter(u => u.profile?.role === 'admin').length;
+            const totalClientes = allUsers.filter(u => u.profile?.role === 'cliente').length;
+            
+            document.getElementById('total-usuarios').textContent = totalUsuarios;
+            document.getElementById('total-admins').textContent = totalAdmins;
+            document.getElementById('total-clientes-users').textContent = totalClientes;
+            
+            container.innerHTML = allUsers.map(u => {
                 const role = u.profile?.role || 'colaborador';
+                const roleClass = role === 'admin' ? 'role-admin' : role === 'colaborador' ? 'role-colaborador' : 'role-cliente';
+                const roleText = role === 'admin' ? 'Admin' : role === 'colaborador' ? 'Colaborador' : 'Cliente';
+                
                 return `
-                <tr class="hover:bg-slate-50">
-                    <td class="px-4 py-3">
-                        <div class="font-medium text-slate-800">${u.profile?.full_name || 'Sin nombre'}</div>
-                    </td>
-                    <td class="px-4 py-3 text-sm text-slate-600">${u.email}</td>
-                    <td class="px-4 py-3"><span class="role-badge role-${role}">${role}</span></td>
-                    <td class="px-4 py-3">
-                        <span class="px-2 py-1 rounded-full text-xs ${u.profile?.is_active ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}">
-                            ${u.profile?.is_active ? 'Activo' : 'Inactivo'}
-                        </span>
-                    </td>
-                    <td class="px-4 py-3">
-                        ${u.id !== currentUser?.id ? `
-                        <button onclick="deleteUser('${u.id}')" class="text-red-600 hover:text-red-800 transition-colors" title="Eliminar usuario">
-                            <i class="fas fa-trash-alt"></i>
-                        </button>
-                        ` : '<span class="text-slate-400 text-xs">Tú</span>'}
-                    </td>
-                </tr>
-            `}).join('');
+                    <div class="user-card">
+                        <div class="flex justify-between items-start mb-3">
+                            <div>
+                                <h4 class="font-bold text-slate-800">${u.profile?.full_name || 'Sin nombre'}</h4>
+                                <p class="text-sm text-slate-500">@${u.email?.split('@')[0] || 'usuario'}</p>
+                            </div>
+                            <span class="role-badge ${roleClass}">
+                                <i class="fas fa-${role === 'admin' ? 'shield-alt' : role === 'colaborador' ? 'user-tie' : 'user'}"></i>
+                                ${roleText}
+                            </span>
+                        </div>
+                        ${u.profile?.cliente_asignado ? `<p class="text-sm text-emerald-600 mb-2"><i class="fas fa-building mr-1"></i>Cliente asignado</p>` : ''}
+                        <p class="text-xs text-slate-400 mb-3">${u.email || 'Sin email'}</p>
+                        <div class="flex justify-between items-center pt-3 border-t border-slate-200">
+                            <span class="text-xs ${u.profile?.is_active ? 'text-emerald-600' : 'text-red-600'} font-medium">
+                                <i class="fas fa-circle text-[8px] mr-1"></i>${u.profile?.is_active ? 'Activo' : 'Inactivo'}
+                            </span>
+                            <div class="flex gap-2">
+                                ${u.id !== currentUser?.id ? `
+                                <button onclick="deleteUser('${u.id}')" class="text-red-600 hover:text-red-800 text-sm" title="Eliminar usuario">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                                ` : '<span class="text-slate-400 text-xs">Tú</span>'}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
         }
 
+        // ==========================================
+        // SELECTS Y FORMULARIOS
+        // ==========================================
         function populateSelects() {
+            // Select de clientes en formulario de ticket - LISTA COMPLETA
             const clienteSelect = document.getElementById('select-cliente');
             if (clienteSelect) {
                 clienteSelect.innerHTML = '<option value="">Seleccionar cliente...</option>' +
                     clientes.map(c => `<option value="${c.nombre}">${c.nombre}</option>`).join('');
             }
             
-            const fallaSelect = document.getElementById('select-falla');
-            if (fallaSelect) {
-                fallaSelect.innerHTML = '<option value="">Seleccionar falla...</option>' +
-                    catalogos.map(f => `<option value="${f.valor}">${f.valor}</option>`).join('');
-            }
-            
+            // Select de clientes en formulario de usuario
             const userClienteSelect = document.getElementById('user-cliente');
             if (userClienteSelect) {
                 userClienteSelect.innerHTML = '<option value="">Seleccionar cliente...</option>' +
@@ -1767,92 +2110,34 @@
             }
         }
 
-        function getStatusClass(status) {
-            const classes = {
-                'SOLUCIONADO POR SOPORTE': 'status-solucionado',
-                'EN ATENCIÓN TÉCNICA': 'status-atencion',
-                'PENDIENTE POR CLIENTE': 'status-pendiente',
-                'EN SEGUIMIENTO': 'status-seguimiento',
-                'CERRADO': 'status-cerrado'
-            };
-            return classes[status] || 'status-pendiente';
-        }
-
         // ==========================================
-        // NAVEGACIÓN MEJORADA
-        // ==========================================
-        function showTab(tabName, navElement) {
-            console.log('🔄 Cambiando a pestaña:', tabName);
-            
-            // Ocultar todas las pestañas
-            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-            
-            // Mostrar la pestaña seleccionada
-            const selectedTab = document.getElementById('tab-' + tabName);
-            if (selectedTab) {
-                selectedTab.classList.add('active');
-            } else {
-                console.error('No se encontró la pestaña:', 'tab-' + tabName);
-            }
-            
-            // Actualizar navegación
-            document.querySelectorAll('.nav-item').forEach(n => {
-                n.classList.remove('active', 'bg-blue-600', 'text-white');
-                n.classList.add('text-slate-300');
-            });
-            
-            if (navElement) {
-                navElement.classList.add('active', 'bg-blue-600', 'text-white');
-                navElement.classList.remove('text-slate-300');
-            }
-            
-            // Si vamos a tickets, limpiar filtros solo si no venimos de un cliente específico
-            if (tabName === 'tickets' && !currentTicketFilter.cliente) {
-                clearTicketFilters();
-            }
-        }
-
-        // ==========================================
-        // GUARDAR DATOS - CORREGIDO CON NOMBRES REALES DE BD
+        // GUARDAR DATOS
         // ==========================================
         async function saveTicket(event) {
             event.preventDefault();
             
             const ticket = {
-                // Información General
                 folio: document.getElementById('input-folio').value,
                 fecha: document.getElementById('input-fecha').value,
                 hora: document.getElementById('input-hora').value,
-                
-                // Asignación
                 colaborador: document.getElementById('input-colaborador').value,
-                asignado_a: document.getElementById('input-asignado-a').value || '',
+                asignado_a: document.getElementById('input-asignado-a').value || null,
                 metodo: document.getElementById('select-metodo').value,
                 responsable: document.getElementById('select-responsable').value || null,
-                tecnico: document.getElementById('input-tecnico').value || null,
-                
-                // Cliente y Ubicación
                 cliente: document.getElementById('select-cliente').value,
                 sucursal_num: document.getElementById('input-sucursal-num').value || null,
                 sucursal_nombre: document.getElementById('input-sucursal-nombre').value || null,
                 ciudad: document.getElementById('input-ciudad').value || null,
                 estado: document.getElementById('input-estado').value || null,
-                
-                // Contacto del Cliente
                 empleado: document.getElementById('input-empleado').value || null,
                 cargo: document.getElementById('input-cargo').value || null,
-                
-                // Detalles de la Falla
+                tecnico: document.getElementById('input-tecnico').value || null,
                 falla: document.getElementById('select-falla').value,
                 causa: document.getElementById('select-causa').value || null,
                 solucion: document.getElementById('select-solucion').value || null,
-                
-                // Estatus
                 estatus: document.getElementById('select-estatus').value,
                 fecha_2nivel: document.getElementById('input-fecha-2nivel').value || null,
                 fecha_cierre: document.getElementById('input-fecha-cierre').value || null,
-                
-                // Comentarios
                 comentarios: document.getElementById('input-comentarios').value || null
             };
             
@@ -1910,6 +2195,7 @@
                 
                 if (authError) throw authError;
                 
+                // Actualizar perfil con datos adicionales
                 const { error: updateError } = await supabaseClient
                     .from('profiles')
                     .update({
@@ -1957,11 +2243,109 @@
         }
 
         // ==========================================
+        // EXPORTAR A EXCEL
+        // ==========================================
+        function exportToExcel() {
+            // Preparar datos para exportación
+            const data = tickets.map(t => ({
+                'Folio': t.folio,
+                'Fecha': t.fecha,
+                'Hora': t.hora,
+                'Colaborador': t.colaborador,
+                'Asignado a': t.asignado_a,
+                'Método': t.metodo,
+                'Responsable': t.responsable,
+                'Cliente': t.cliente,
+                'N° Sucursal': t.sucursal_num,
+                'Sucursal': t.sucursal_nombre,
+                'Ciudad': t.ciudad,
+                'Estado': t.estado,
+                'Empleado': t.empleado,
+                'Cargo': t.cargo,
+                'Técnico': t.tecnico,
+                'Falla': t.falla,
+                'Causa': t.causa,
+                'Solución': t.solucion,
+                'Estatus': t.estatus,
+                'Fecha 2° Nivel': t.fecha_2nivel,
+                'Fecha Cierre': t.fecha_cierre,
+                'Comentarios': t.comentarios
+            }));
+            
+            // Crear libro de Excel
+            const ws = XLSX.utils.json_to_sheet(data);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Incidencias');
+            
+            // Generar nombre de archivo con fecha
+            const fecha = new Date().toISOString().split('T')[0];
+            XLSX.writeFile(wb, `UXMAL_Incidencias_${fecha}.xlsx`);
+            
+            showToast('Excel exportado correctamente', 'success');
+        }
+
+        // ==========================================
         // UTILIDADES
         // ==========================================
+        function getStatusClass(status) {
+            const classes = {
+                'SOLUCIONADO POR SOPORTE': 'status-solucionado',
+                'CERRADO': 'status-cerrado',
+                'EN SEGUIMIENTO DE SOPORTE': 'status-seguimiento',
+                'EN ATENCIÓN TÉCNICA': 'status-atencion',
+                'PENDIENTE POR CLIENTE': 'status-pendiente',
+                'PENDIENTE POR COORDINACIÓN TÉCNICA': 'status-seguimiento',
+                'ACTIVACIÓN DE SERVICIO': 'status-solucionado',
+                'BAJA DE SERVICIO': 'status-cerrado',
+                'PREVENTIVO': 'status-seguimiento',
+                'LEVANTAMIENTO': 'status-seguimiento'
+            };
+            return classes[status] || 'status-pendiente';
+        }
+
+        function formatStatus(status) {
+            if (status === 'SOLUCIONADO POR SOPORTE') return 'Solucionado';
+            if (status === 'EN SEGUIMIENTO DE SOPORTE') return 'En Seguimiento';
+            if (status === 'EN ATENCIÓN TÉCNICA') return 'Atención Técnica';
+            if (status === 'PENDIENTE POR CLIENTE') return 'Pendiente Cliente';
+            if (status === 'PENDIENTE POR COORDINACIÓN TÉCNICA') return 'Coordinación';
+            if (status === 'ACTIVACIÓN DE SERVICIO') return 'Activación';
+            if (status === 'BAJA DE SERVICIO') return 'Baja';
+            return status;
+        }
+
         function showMainApp() {
             document.getElementById('loginScreen').style.display = 'none';
             document.getElementById('mainApp').classList.remove('hidden');
+        }
+
+        function showTab(tabName, navElement) {
+            console.log('🔄 Cambiando a pestaña:', tabName);
+            
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            
+            const selectedTab = document.getElementById('tab-' + tabName);
+            if (selectedTab) {
+                selectedTab.classList.add('active');
+            }
+            
+            document.querySelectorAll('.nav-item').forEach(n => {
+                n.classList.remove('active', 'bg-blue-600', 'text-white');
+                n.classList.add('text-slate-300');
+            });
+            
+            if (navElement) {
+                navElement.classList.add('active', 'bg-blue-600', 'text-white');
+                navElement.classList.remove('text-slate-300');
+            }
+            
+            // Renderizar contenido específico de la pestaña
+            if (tabName === 'semaforos') renderSemaforos();
+            if (tabName === 'dashboard') renderDashboard();
+            if (tabName === 'tickets') renderTickets();
+            if (tabName === 'mis-tickets') renderMisTickets();
+            if (tabName === 'clientes') renderClientes();
+            if (tabName === 'usuarios') renderUsers();
         }
 
         function openModal(modal) {
@@ -1969,18 +2353,12 @@
             if (modalEl) {
                 modalEl.classList.add('active');
                 
-                // Si es el modal de nuevo ticket, inicializar valores por defecto
                 if (modal === 'newTicket') {
                     const now = new Date();
-                    const fechaInput = document.getElementById('input-fecha');
-                    const horaInput = document.getElementById('input-hora');
-                    const folioInput = document.getElementById('input-folio');
-                    const colaboradorInput = document.getElementById('input-colaborador');
-                    
-                    if (fechaInput) fechaInput.valueAsDate = now;
-                    if (horaInput) horaInput.value = now.toTimeString().slice(0, 5);
-                    if (folioInput) folioInput.value = 'UX' + Date.now().toString().slice(-5);
-                    if (colaboradorInput && currentProfile) colaboradorInput.value = currentProfile.full_name;
+                    document.getElementById('input-fecha').valueAsDate = now;
+                    document.getElementById('input-hora').value = now.toTimeString().slice(0, 5);
+                    document.getElementById('input-folio').value = 'UX' + Date.now().toString().slice(-5);
+                    document.getElementById('input-colaborador').value = currentProfile?.full_name || '';
                 }
             }
         }
@@ -2037,10 +2415,13 @@
         window.createInitialAdmin = createInitialAdmin;
         window.filterSemaforo = filterSemaforo;
         window.verCliente = verCliente;
-        window.clearTicketFilters = clearTicketFilters;
+        window.exportToExcel = exportToExcel;
         window.loadSampleData = loadSampleData;
         window.checkConnection = checkConnection;
+        window.filterByStatus = filterByStatus;
+        window.applyFilters = applyFilters;
         window.renderTickets = renderTickets;
+        window.viewTicket = viewTicket;
     </script>
 </body>
 </html>
